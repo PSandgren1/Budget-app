@@ -212,59 +212,59 @@ const App: React.FC = () => {
         {/* Tabbinnehåll */}
         {activeTab === 'budget' && (
           <>
-            <header className="mb-10 p-6 bg-gray-800 rounded-lg shadow-xl">
-              <h1 className="text-4xl font-bold text-yellow-400 mb-6 text-center">Månadsbudget</h1>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
-                <div className="bg-gray-700 p-4 rounded-lg shadow-md">
-                  <h2 className="text-lg text-green-400">Totala Inkomster</h2>
-                  <p className="text-2xl font-semibold">{formatCurrency(totalIncomes)}</p>
+            <header className="mb-10 p-4 sm:p-6 bg-gray-800 rounded-lg shadow-xl">
+              <h1 className="text-3xl sm:text-4xl font-bold text-yellow-400 mb-4 sm:mb-6 text-center">Månadsbudget</h1>
+              <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 text-center">
+                <div className="bg-gray-700 p-3 sm:p-4 rounded-lg shadow-md">
+                  <h2 className="text-base sm:text-lg text-green-400">Totala Inkomster</h2>
+                  <p className="text-xl sm:text-2xl font-semibold">{formatCurrency(totalIncomes)}</p>
                 </div>
-                <div className="bg-gray-700 p-4 rounded-lg shadow-md">
-                  <h2 className="text-lg text-red-400">Totala Utgifter</h2>
-                  <p className="text-2xl font-semibold">{formatCurrency(totalExpenses)}</p>
+                <div className="bg-gray-700 p-3 sm:p-4 rounded-lg shadow-md">
+                  <h2 className="text-base sm:text-lg text-red-400">Totala Utgifter</h2>
+                  <p className="text-xl sm:text-2xl font-semibold">{formatCurrency(totalExpenses)}</p>
                 </div>
-                <div className={`bg-gray-700 p-4 rounded-lg shadow-md ${savings < 0 ? 'border border-red-500' : 'border border-yellow-400'}`}>
-                  <h2 className="text-lg text-yellow-400">Att Spara</h2>
-                  <p className={`text-2xl font-semibold ${savings < 0 ? 'text-red-500' : 'text-yellow-400'}`}>{formatCurrency(savings)}</p>
-                  <div className="text-xs text-gray-300 mt-2">
+                <div className={`bg-gray-700 p-3 sm:p-4 rounded-lg shadow-md ${savings < 0 ? 'border border-red-500' : 'border border-yellow-400'}`}> 
+                  <h2 className="text-base sm:text-lg text-yellow-400">Att Spara</h2>
+                  <p className={`text-xl sm:text-2xl font-semibold ${savings < 0 ? 'text-red-500' : 'text-yellow-400'}`}>{formatCurrency(savings)}</p>
+                  <div className="text-xs text-gray-300 mt-1 sm:mt-2">
                     {savings > 0
                       ? `Kvar att spara: ${formatCurrency(Math.max(0, savings - totalSaved))}`
                       : 'Kvar att spara: 0 kr'}
                   </div>
                 </div>
                 {/* Sparande-box */}
-                <div className="bg-gray-700 p-4 rounded-lg shadow-md flex flex-col items-center">
-                  <h2 className="text-lg text-blue-400">Sparande</h2>
-                  <p className="text-2xl font-semibold">{formatCurrency(savings > 0 ? savings : 0)}</p>
-                  <div className="mt-2 w-full bg-gray-600 rounded h-3">
+                <div className="bg-gray-700 p-3 sm:p-4 rounded-lg shadow-md flex flex-col items-center">
+                  <h2 className="text-base sm:text-lg text-blue-400">Sparande</h2>
+                  <p className="text-xl sm:text-2xl font-semibold">{formatCurrency(savings > 0 ? savings : 0)}</p>
+                  <div className="mt-1 sm:mt-2 w-full bg-gray-600 rounded h-3">
                     <div className="bg-yellow-400 h-3 rounded" style={{ width: `${savings > 0 ? Math.min(100, (totalSaved / savings) * 100) : 0}%` }}></div>
                   </div>
                   <div className="text-xs text-gray-300 mt-1">{savings > 0 ? Math.round((totalSaved / savings) * 100) : 0}% av möjligt sparande</div>
                 </div>
               </div>
             </header>
-            <section className="mb-10 p-6 bg-gray-800 rounded-lg shadow-xl">
-              <h2 className="text-2xl font-semibold text-yellow-400 mb-4">Lägg till post</h2>
-              <div className="flex flex-col md:flex-row gap-4 mb-4">
-                <input type="text" placeholder="Beskrivning" value={description} onChange={e => setDescription(e.target.value)} className="flex-grow p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent outline-none" />
-                <input type="number" placeholder="Belopp (SEK)" value={amount} onChange={e => setAmount(e.target.value)} className="p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent outline-none md:w-48" />
-                <select value={category} onChange={e => setCategory(e.target.value)} className="p-3 bg-gray-700 border border-gray-600 rounded-lg text-white md:w-48">
+            <section className="mb-10 p-4 sm:p-6 bg-gray-800 rounded-lg shadow-xl">
+              <h2 className="text-xl sm:text-2xl font-semibold text-yellow-400 mb-3 sm:mb-4">Lägg till post</h2>
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-3 sm:mb-4">
+                <input type="text" placeholder="Beskrivning" value={description} onChange={e => setDescription(e.target.value)} className="flex-grow p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent outline-none min-w-0" />
+                <input type="number" placeholder="Belopp (SEK)" value={amount} onChange={e => setAmount(e.target.value)} className="p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent outline-none w-full sm:w-48 min-w-0" />
+                <select value={category} onChange={e => setCategory(e.target.value)} className="p-3 bg-gray-700 border border-gray-600 rounded-lg text-white w-full sm:w-48 min-w-0">
                   {EXPENSE_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
               </div>
-              <div className="flex flex-col md:flex-row gap-4">
-                <button onClick={addIncome} className="flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 w-full md:w-auto">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                <button onClick={addIncome} className="flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 w-full sm:w-auto">
                   <PlusIcon className="w-5 h-5" /> Lägg till Inkomst
                 </button>
-                <button onClick={addExpense} className="flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 w-full md:w-auto">
+                <button onClick={addExpense} className="flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 w-full sm:w-auto">
                   <PlusIcon className="w-5 h-5" /> Lägg till Utgift
                 </button>
-                <button onClick={addSaving} className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 w-full md:w-auto">
+                <button onClick={addSaving} className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 w-full sm:w-auto">
                   <PlusIcon className="w-5 h-5" /> Lägg till Sparande
                 </button>
               </div>
             </section>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-10">
               <section className="p-6 bg-gray-800 rounded-lg shadow-xl">
                 <h2 className="text-2xl font-semibold text-green-400 mb-4 border-b-2 border-yellow-400 pb-2">Inkomster</h2>
                 <ul>
