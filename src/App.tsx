@@ -8,20 +8,17 @@ const EXPENSE_CATEGORIES = [
   'Boende', 'Mat', 'Transport', 'Nöjen', 'Hälsa', 'Shopping', 'Övrigt'
 ];
 
+const SUPPORTED_CURRENCIES = [
+  { code: 'SEK', label: 'SEK (kr)' },
+  { code: 'EUR', label: 'EUR (€)' },
+  { code: 'USD', label: 'USD ($)' },
+  { code: 'NOK', label: 'NOK (kr)' },
+  { code: 'DKK', label: 'DKK (kr)' },
+];
+
 const getCurrentMonth = () => {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-};
-
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('sv-SE', { style: 'currency', currency: 'SEK' }).format(amount);
-};
-
-const emptyData = {
-  incomes: [],
-  expenses: [],
-  savingsList: [],
-  maxSavings: 0,
 };
 
 const App: React.FC = () => {
@@ -33,7 +30,7 @@ const App: React.FC = () => {
   // Budgetdata per månad
   const [data, setData] = useState(() => {
     const saved = localStorage.getItem(`budget-data-${getCurrentMonth()}`);
-    return saved ? JSON.parse(saved) : { ...emptyData };
+    return saved ? JSON.parse(saved) : { incomes: [], expenses: [], savingsList: [], maxSavings: 0 };
   });
 
   // Formfält
@@ -41,6 +38,7 @@ const App: React.FC = () => {
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState(EXPENSE_CATEGORIES[0]);
   const [maxSavings, setMaxSavings] = useState(data.maxSavings || 10000);
+  const [currency, setCurrency] = useState(() => localStorage.getItem('budget-currency') || 'SEK');
 
   // Synka data med localStorage när månad byts
   useEffect(() => {
@@ -49,7 +47,7 @@ const App: React.FC = () => {
       setData(JSON.parse(saved));
       setMaxSavings(JSON.parse(saved).maxSavings || 10000);
     } else {
-      setData({ ...emptyData, maxSavings });
+      setData({ incomes: [], expenses: [], savingsList: [], maxSavings, currency });
     }
   }, [selectedMonth]);
 
@@ -59,12 +57,20 @@ const App: React.FC = () => {
       JSON.stringify({ ...data, maxSavings }));
   }, [data, selectedMonth, maxSavings]);
 
+  useEffect(() => {
+    localStorage.setItem('budget-currency', currency);
+  }, [currency]);
+
   // Summeringar
   const totalIncomes = useMemo(() => (data.incomes || []).reduce((sum: number, item: any) => sum + item.amount, 0), [data]);
   const totalExpenses = useMemo(() => (data.expenses || []).reduce((sum: number, item: any) => sum + item.amount, 0), [data]);
   const unpaidExpenses = useMemo(() => (data.expenses || []).filter((item: any) => !item.paid).reduce((sum: number, item: any) => sum + item.amount, 0), [data]);
   const savings = useMemo(() => totalIncomes - totalExpenses, [totalIncomes, totalExpenses]);
   const totalSaved = useMemo(() => (data.savingsList || []).reduce((sum: number, item: any) => sum + item.amount, 0), [data]);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('sv-SE', { style: 'currency', currency }).format(amount);
+  };
 
   // Lägg till inkomst
   const addIncome = () => {
@@ -174,9 +180,14 @@ const App: React.FC = () => {
           <button onClick={() => setActiveTab('diagram')} className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'diagram' ? 'bg-yellow-400 text-gray-900' : 'bg-gray-700 text-yellow-400'}`}>Diagram</button>
           <button onClick={() => setActiveTab('year')} className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'year' ? 'bg-yellow-400 text-gray-900' : 'bg-gray-700 text-yellow-400'}`}>Årsöversikt</button>
         </div>
-        {/* Månadsväljare */}
-        <div className="flex gap-4 mb-8 items-center">
+        {/* Månadsväljare och valutaväljare */}
+        <div className="flex gap-4 mb-8 items-center flex-wrap">
           <input type="month" id="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-gray-700 text-white rounded px-3 py-2 h-12 text-base border-none focus:ring-2 focus:ring-yellow-400 focus:outline-none" />
+          <select value={currency} onChange={e => setCurrency(e.target.value)} className="bg-gray-700 text-white rounded px-3 py-2 h-12 text-base border-none focus:ring-2 focus:ring-yellow-400 focus:outline-none">
+            {SUPPORTED_CURRENCIES.map(c => (
+              <option key={c.code} value={c.code}>{c.label}</option>
+            ))}
+          </select>
           <button onClick={exportCSV} className="ml-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded h-12">Exportera CSV</button>
           <label className="ml-2 cursor-pointer bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded h-12 flex items-center">
             Importera CSV
@@ -221,7 +232,7 @@ const App: React.FC = () => {
               <h2 className="text-2xl font-semibold text-yellow-400 mb-4">Lägg till post</h2>
               <div className="flex flex-col md:flex-row gap-4 mb-4">
                 <input type="text" placeholder="Beskrivning" value={description} onChange={e => setDescription(e.target.value)} className="flex-grow p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent outline-none" />
-                <input type="number" placeholder="Belopp (SEK)" value={amount} onChange={e => setAmount(e.target.value)} className="p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent outline-none md:w-48" />
+                <input type="number" placeholder={`Belopp (${currency})`} value={amount} onChange={e => setAmount(e.target.value)} className="p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent outline-none md:w-48" />
                 <select value={category} onChange={e => setCategory(e.target.value)} className="p-3 bg-gray-700 border border-gray-600 rounded-lg text-white md:w-48">
                   {EXPENSE_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
