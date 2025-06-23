@@ -62,6 +62,7 @@ const App: React.FC = () => {
   // Summeringar
   const totalIncomes = useMemo(() => (data.incomes || []).reduce((sum: number, item: any) => sum + item.amount, 0), [data]);
   const totalExpenses = useMemo(() => (data.expenses || []).reduce((sum: number, item: any) => sum + item.amount, 0), [data]);
+  const unpaidExpenses = useMemo(() => (data.expenses || []).filter((item: any) => !item.paid).reduce((sum: number, item: any) => sum + item.amount, 0), [data]);
   const savings = useMemo(() => totalIncomes - totalExpenses, [totalIncomes, totalExpenses]);
   const totalSaved = useMemo(() => (data.savingsList || []).reduce((sum: number, item: any) => sum + item.amount, 0), [data]);
 
@@ -81,10 +82,20 @@ const App: React.FC = () => {
     if (!description || !amount) return;
     setData((prev: any) => ({
       ...prev,
-      expenses: [...(prev.expenses || []), { id: Date.now(), description, amount: parseFloat(amount), category }],
+      expenses: [...(prev.expenses || []), { id: Date.now(), description, amount: parseFloat(amount), category, paid: false }],
     }));
     setDescription('');
     setAmount('');
+  };
+
+  // Markera utgift som betald/obetalad
+  const toggleExpensePaid = (id: number) => {
+    setData((prev: any) => ({
+      ...prev,
+      expenses: (prev.expenses || []).map((item: any) =>
+        item.id === id ? { ...item, paid: !item.paid } : item
+      ),
+    }));
   };
 
   // Lägg till sparande
@@ -246,12 +257,19 @@ const App: React.FC = () => {
               </section>
               <section className="p-6 bg-gray-800 rounded-lg shadow-xl">
                 <h2 className="text-2xl font-semibold text-red-400 mb-4 border-b-2 border-yellow-400 pb-2">Utgifter</h2>
+                <div className="mb-4 bg-red-900/80 rounded-lg p-3 text-red-200 font-semibold flex items-center gap-2">
+                  <span>Obetalda utgifter:</span>
+                  <span className="text-lg">{formatCurrency(unpaidExpenses)}</span>
+                </div>
                 <ul>
                   {(data.expenses || []).map((item: any) => (
-                    <li key={item.id} className="flex justify-between items-center p-3 mb-2 bg-gray-700 rounded-lg shadow-sm hover:bg-gray-600 transition duration-150">
-                      <span>{item.description} <span className="text-xs text-yellow-300">({item.category})</span></span>
+                    <li key={item.id} className={`flex justify-between items-center p-3 mb-2 rounded-lg shadow-sm transition duration-150 ${item.paid ? 'bg-green-700/80 hover:bg-green-600/80' : 'bg-gray-700 hover:bg-gray-600'}`}> 
+                      <div className="flex items-center gap-2">
+                        <input type="checkbox" checked={!!item.paid} onChange={() => toggleExpensePaid(item.id)} className="accent-green-500 w-5 h-5" title="Markera som betald" />
+                        <span className={item.paid ? 'line-through text-green-200' : ''}>{item.description} <span className="text-xs text-yellow-300">({item.category})</span></span>
+                      </div>
                       <div className="flex items-center gap-3">
-                        <span className="font-medium text-red-300">{formatCurrency(item.amount)}</span>
+                        <span className={`font-medium ${item.paid ? 'text-green-200' : 'text-red-300'}`}>{formatCurrency(item.amount)}</span>
                         <button onClick={() => removeItem('expense', item.id)} className="text-gray-400 hover:text-red-400 transition duration-150">
                           <TrashIcon />
                         </button>
