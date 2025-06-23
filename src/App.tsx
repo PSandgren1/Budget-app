@@ -171,6 +171,21 @@ const App: React.FC = () => {
     reader.readAsText(file);
   };
 
+  // Sök och filter för utgifter
+  const [expenseSearch, setExpenseSearch] = useState('');
+  const [showOnlyUnpaid, setShowOnlyUnpaid] = useState(false);
+
+  const filteredExpenses = useMemo(() => {
+    return (data.expenses || [])
+      .filter((item: any) =>
+        (!showOnlyUnpaid || !item.paid) &&
+        (
+          item.description.toLowerCase().includes(expenseSearch.toLowerCase()) ||
+          (item.category && item.category.toLowerCase().includes(expenseSearch.toLowerCase()))
+        )
+      );
+  }, [data.expenses, expenseSearch, showOnlyUnpaid]);
+
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center py-10 px-4">
       <div className="w-full max-w-6xl">
@@ -232,7 +247,7 @@ const App: React.FC = () => {
               <h2 className="text-2xl font-semibold text-yellow-400 mb-4">Lägg till post</h2>
               <div className="flex flex-col md:flex-row gap-4 mb-4">
                 <input type="text" placeholder="Beskrivning" value={description} onChange={e => setDescription(e.target.value)} className="flex-grow p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent outline-none" />
-                <input type="number" placeholder={`Belopp (${currency})`} value={amount} onChange={e => setAmount(e.target.value)} className="p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent outline-none md:w-48" />
+                <input type="number" placeholder="Belopp (SEK)" value={amount} onChange={e => setAmount(e.target.value)} className="p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent outline-none md:w-48" />
                 <select value={category} onChange={e => setCategory(e.target.value)} className="p-3 bg-gray-700 border border-gray-600 rounded-lg text-white md:w-48">
                   {EXPENSE_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
@@ -268,12 +283,27 @@ const App: React.FC = () => {
               </section>
               <section className="p-6 bg-gray-800 rounded-lg shadow-xl">
                 <h2 className="text-2xl font-semibold text-red-400 mb-4 border-b-2 border-yellow-400 pb-2">Utgifter</h2>
+                <div className="mb-2 flex flex-col sm:flex-row gap-2 sm:items-center">
+                  <input
+                    type="text"
+                    placeholder="Sök utgift..."
+                    value={expenseSearch}
+                    onChange={e => setExpenseSearch(e.target.value)}
+                    className="p-2 bg-gray-700 border border-gray-600 rounded-lg text-white w-full max-w-[180px] sm:max-w-[220px]"
+                  />
+                  <button
+                    onClick={() => setShowOnlyUnpaid(v => !v)}
+                    className={`px-3 py-2 rounded-lg font-semibold border transition text-sm whitespace-nowrap ${showOnlyUnpaid ? 'bg-red-500 text-white border-red-600' : 'bg-gray-700 text-red-300 border-gray-600'}`}
+                  >
+                    {showOnlyUnpaid ? 'Visa alla' : 'Visa bara obetalda'}
+                  </button>
+                </div>
                 <div className="mb-4 bg-red-900/80 rounded-lg p-3 text-red-200 font-semibold flex items-center gap-2">
                   <span>Obetalda utgifter:</span>
                   <span className="text-lg">{formatCurrency(unpaidExpenses)}</span>
                 </div>
                 <ul>
-                  {(data.expenses || []).map((item: any) => (
+                  {filteredExpenses.map((item: any) => (
                     <li key={item.id} className={`flex justify-between items-center p-3 mb-2 rounded-lg shadow-sm transition duration-150 ${item.paid ? 'bg-green-700/80 hover:bg-green-600/80' : 'bg-gray-700 hover:bg-gray-600'}`}> 
                       <div className="flex items-center gap-2">
                         <input type="checkbox" checked={!!item.paid} onChange={() => toggleExpensePaid(item.id)} className="accent-green-500 w-5 h-5" title="Markera som betald" />
