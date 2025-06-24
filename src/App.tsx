@@ -3,10 +3,7 @@ import TrashIcon from './assets/icons/TrashIcon.tsx';
 import PlusIcon from './assets/icons/PlusIcon.tsx';
 import DiagramTab from './DiagramTab';
 import YearOverviewTab from './YearOverviewTab';
-
-const EXPENSE_CATEGORIES = [
-  'Boende', 'Mat', 'Transport', 'Nöjen', 'Hälsa', 'Shopping', 'Övrigt'
-];
+import translations from './translations';
 
 const SUPPORTED_CURRENCIES = [
   { code: 'SEK', label: 'SEK (kr)' },
@@ -36,7 +33,7 @@ const App: React.FC = () => {
   // Formfält
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState(EXPENSE_CATEGORIES[0]);
+  const [category, setCategory] = useState('');
   const [maxSavings, setMaxSavings] = useState(data.maxSavings || 10000);
   const [currency, setCurrency] = useState(() => localStorage.getItem('budget-currency') || 'SEK');
 
@@ -186,14 +183,34 @@ const App: React.FC = () => {
       );
   }, [data.expenses, expenseSearch, showOnlyUnpaid]);
 
+  const [language, setLanguage] = useState(() => localStorage.getItem('budget-lang') || 'sv');
+  const t = translations[language as 'sv' | 'en'];
+
+  useEffect(() => {
+    localStorage.setItem('budget-lang', language);
+  }, [language]);
+
+  const EXPENSE_CATEGORIES = t.categories;
+  useEffect(() => {
+    setCategory(EXPENSE_CATEGORIES[0]);
+  }, [language]);
+
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center py-10 px-4">
       <div className="w-full max-w-6xl">
+        {/* Språkväxlare */}
+        <div className="flex justify-end mb-2 gap-2">
+          <select id="lang" value={language} onChange={e => setLanguage(e.target.value)}
+            className="bg-gray-700 text-white rounded px-2 py-1 border border-gray-600 focus:ring-2 focus:ring-yellow-400 focus:outline-none text-sm font-semibold flex items-center min-w-[90px]">
+            <option value="sv">Svenska</option>
+            <option value="en">English</option>
+          </select>
+        </div>
         {/* Tabbar */}
         <div className="flex gap-4 mb-8">
-          <button onClick={() => setActiveTab('budget')} className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'budget' ? 'bg-yellow-400 text-gray-900' : 'bg-gray-700 text-yellow-400'}`}>Budget</button>
-          <button onClick={() => setActiveTab('diagram')} className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'diagram' ? 'bg-yellow-400 text-gray-900' : 'bg-gray-700 text-yellow-400'}`}>Diagram</button>
-          <button onClick={() => setActiveTab('year')} className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'year' ? 'bg-yellow-400 text-gray-900' : 'bg-gray-700 text-yellow-400'}`}>Årsöversikt</button>
+          <button onClick={() => setActiveTab('budget')} className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'budget' ? 'bg-yellow-400 text-gray-900' : 'bg-gray-700 text-yellow-400'}`}>{t.budget}</button>
+          <button onClick={() => setActiveTab('diagram')} className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'diagram' ? 'bg-yellow-400 text-gray-900' : 'bg-gray-700 text-yellow-400'}`}>{t.diagram}</button>
+          <button onClick={() => setActiveTab('year')} className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'year' ? 'bg-yellow-400 text-gray-900' : 'bg-gray-700 text-yellow-400'}`}>{t.year}</button>
         </div>
         {/* Månadsväljare och valutaväljare */}
         <div className="flex gap-4 mb-8 items-center flex-wrap">
@@ -203,9 +220,9 @@ const App: React.FC = () => {
               <option key={c.code} value={c.code}>{c.label}</option>
             ))}
           </select>
-          <button onClick={exportCSV} className="ml-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded h-12">Exportera CSV</button>
+          <button onClick={exportCSV} className="ml-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded h-12">{t.exportCSV}</button>
           <label className="ml-2 cursor-pointer bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded h-12 flex items-center">
-            Importera CSV
+            {t.importCSV}
             <input type="file" accept=".csv" onChange={importCSV} className="hidden" />
           </label>
         </div>
@@ -216,57 +233,57 @@ const App: React.FC = () => {
               <h1 className="text-3xl sm:text-4xl font-bold text-yellow-400 mb-4 sm:mb-6 text-center">Månadsbudget</h1>
               <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 text-center">
                 <div className="bg-gray-700 p-3 sm:p-4 rounded-lg shadow-md">
-                  <h2 className="text-base sm:text-lg text-green-400">Totala Inkomster</h2>
+                  <h2 className="text-base sm:text-lg text-green-400">{t.totalIncomes}</h2>
                   <p className="text-xl sm:text-2xl font-semibold">{formatCurrency(totalIncomes)}</p>
                 </div>
                 <div className="bg-gray-700 p-3 sm:p-4 rounded-lg shadow-md">
-                  <h2 className="text-base sm:text-lg text-red-400">Totala Utgifter</h2>
+                  <h2 className="text-base sm:text-lg text-red-400">{t.totalExpenses}</h2>
                   <p className="text-xl sm:text-2xl font-semibold">{formatCurrency(totalExpenses)}</p>
                 </div>
                 <div className={`bg-gray-700 p-3 sm:p-4 rounded-lg shadow-md ${savings < 0 ? 'border border-red-500' : 'border border-yellow-400'}`}> 
-                  <h2 className="text-base sm:text-lg text-yellow-400">Att Spara</h2>
+                  <h2 className="text-base sm:text-lg text-yellow-400">{t.toSave}</h2>
                   <p className={`text-xl sm:text-2xl font-semibold ${savings < 0 ? 'text-red-500' : 'text-yellow-400'}`}>{formatCurrency(savings)}</p>
                   <div className="text-xs text-gray-300 mt-1 sm:mt-2">
                     {savings > 0
-                      ? `Kvar att spara: ${formatCurrency(Math.max(0, savings - totalSaved))}`
-                      : 'Kvar att spara: 0 kr'}
+                      ? `${t.leftToSave}: ${formatCurrency(Math.max(0, savings - totalSaved))}`
+                      : `${t.leftToSave}: 0 kr`}
                   </div>
                 </div>
                 {/* Sparande-box */}
                 <div className="bg-gray-700 p-3 sm:p-4 rounded-lg shadow-md flex flex-col items-center">
-                  <h2 className="text-base sm:text-lg text-blue-400">Sparande</h2>
+                  <h2 className="text-base sm:text-lg text-blue-400">{t.savings}</h2>
                   <p className="text-xl sm:text-2xl font-semibold">{formatCurrency(savings > 0 ? savings : 0)}</p>
                   <div className="mt-1 sm:mt-2 w-full bg-gray-600 rounded h-3">
                     <div className="bg-yellow-400 h-3 rounded" style={{ width: `${savings > 0 ? Math.min(100, (totalSaved / savings) * 100) : 0}%` }}></div>
                   </div>
-                  <div className="text-xs text-gray-300 mt-1">{savings > 0 ? Math.round((totalSaved / savings) * 100) : 0}% av möjligt sparande</div>
+                  <div className="text-xs text-gray-300 mt-1">{savings > 0 ? Math.round((totalSaved / savings) * 100) : 0}% {t.percentOfPossible}</div>
                 </div>
               </div>
             </header>
             <section className="mb-10 p-4 sm:p-6 bg-gray-800 rounded-lg shadow-xl">
-              <h2 className="text-xl sm:text-2xl font-semibold text-yellow-400 mb-3 sm:mb-4">Lägg till post</h2>
+              <h2 className="text-xl sm:text-2xl font-semibold text-yellow-400 mb-3 sm:mb-4">{t.addEntry}</h2>
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-3 sm:mb-4">
-                <input type="text" placeholder="Beskrivning" value={description} onChange={e => setDescription(e.target.value)} className="flex-grow p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent outline-none min-w-0" />
-                <input type="number" placeholder="Belopp (SEK)" value={amount} onChange={e => setAmount(e.target.value)} className="p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent outline-none w-full sm:w-48 min-w-0" />
-                <select value={category} onChange={e => setCategory(e.target.value)} className="p-3 bg-gray-700 border border-gray-600 rounded-lg text-white w-full sm:w-48 min-w-0">
+                <input type="text" placeholder={t.description} value={description} onChange={e => setDescription(e.target.value)} className="flex-grow p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent outline-none" />
+                <input type="number" placeholder={`${t.amount} (SEK)`} value={amount} onChange={e => setAmount(e.target.value)} className="p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent outline-none md:w-48" />
+                <select value={category} onChange={e => setCategory(e.target.value)} className="p-3 bg-gray-700 border border-gray-600 rounded-lg text-white md:w-48">
                   {EXPENSE_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                <button onClick={addIncome} className="flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 w-full sm:w-auto">
-                  <PlusIcon className="w-5 h-5" /> Lägg till Inkomst
+                <button onClick={addIncome} className="flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 w-full md:w-auto">
+                  <PlusIcon className="w-5 h-5" /> {t.addIncome}
                 </button>
-                <button onClick={addExpense} className="flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 w-full sm:w-auto">
-                  <PlusIcon className="w-5 h-5" /> Lägg till Utgift
+                <button onClick={addExpense} className="flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 w-full md:w-auto">
+                  <PlusIcon className="w-5 h-5" /> {t.addExpense}
                 </button>
-                <button onClick={addSaving} className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 w-full sm:w-auto">
-                  <PlusIcon className="w-5 h-5" /> Lägg till Sparande
+                <button onClick={addSaving} className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 w-full md:w-auto">
+                  <PlusIcon className="w-5 h-5" /> {t.addSaving}
                 </button>
               </div>
             </section>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-10">
               <section className="p-6 bg-gray-800 rounded-lg shadow-xl">
-                <h2 className="text-2xl font-semibold text-green-400 mb-4 border-b-2 border-yellow-400 pb-2">Inkomster</h2>
+                <h2 className="text-2xl font-semibold text-green-400 mb-4 border-b-2 border-yellow-400 pb-2">{t.incomes}</h2>
                 <ul>
                   {(data.incomes || []).map((item: any) => (
                     <li key={item.id} className="flex justify-between items-center p-3 mb-2 bg-gray-700 rounded-lg shadow-sm hover:bg-gray-600 transition duration-150">
@@ -282,11 +299,11 @@ const App: React.FC = () => {
                 </ul>
               </section>
               <section className="p-6 bg-gray-800 rounded-lg shadow-xl">
-                <h2 className="text-2xl font-semibold text-red-400 mb-4 border-b-2 border-yellow-400 pb-2">Utgifter</h2>
+                <h2 className="text-2xl font-semibold text-red-400 mb-4 border-b-2 border-yellow-400 pb-2">{t.expenses}</h2>
                 <div className="mb-2 flex flex-col sm:flex-row gap-2 sm:items-center">
                   <input
                     type="text"
-                    placeholder="Sök utgift..."
+                    placeholder={t.searchExpense}
                     value={expenseSearch}
                     onChange={e => setExpenseSearch(e.target.value)}
                     className="p-2 bg-gray-700 border border-gray-600 rounded-lg text-white w-full max-w-[180px] sm:max-w-[220px]"
@@ -295,11 +312,11 @@ const App: React.FC = () => {
                     onClick={() => setShowOnlyUnpaid(v => !v)}
                     className={`px-3 py-2 rounded-lg font-semibold border transition text-sm whitespace-nowrap ${showOnlyUnpaid ? 'bg-red-500 text-white border-red-600' : 'bg-gray-700 text-red-300 border-gray-600'}`}
                   >
-                    {showOnlyUnpaid ? 'Visa alla' : 'Visa bara obetalda'}
+                    {showOnlyUnpaid ? t.showAll : t.showOnlyUnpaid}
                   </button>
                 </div>
                 <div className="mb-4 bg-red-900/80 rounded-lg p-3 text-red-200 font-semibold flex items-center gap-2">
-                  <span>Obetalda utgifter:</span>
+                  <span>{t.unpaidExpenses}:</span>
                   <span className="text-lg">{formatCurrency(unpaidExpenses)}</span>
                 </div>
                 <ul>
@@ -320,7 +337,7 @@ const App: React.FC = () => {
                 </ul>
               </section>
               <section className="p-6 bg-gray-800 rounded-lg shadow-xl">
-                <h2 className="text-2xl font-semibold text-blue-400 mb-4 border-b-2 border-yellow-400 pb-2">Sparande</h2>
+                <h2 className="text-2xl font-semibold text-blue-400 mb-4 border-b-2 border-yellow-400 pb-2">{t.savingsList}</h2>
                 <ul>
                   {(data.savingsList || []).map((item: any) => (
                     <li key={item.id} className="flex justify-between items-center p-3 mb-2 bg-gray-700 rounded-lg shadow-sm hover:bg-gray-600 transition duration-150">
@@ -335,7 +352,7 @@ const App: React.FC = () => {
                   ))}
                 </ul>
                 <div className="mt-4 text-right text-lg font-semibold text-blue-200">
-                  Totalt sparat: {formatCurrency(totalSaved)}
+                  {t.totalSaved}: {formatCurrency(totalSaved)}
                 </div>
               </section>
             </div>
@@ -347,7 +364,7 @@ const App: React.FC = () => {
         {activeTab === 'year' && (
           <div>
             <div className="mb-4 flex gap-2 items-center">
-              <label htmlFor="year" className="text-yellow-400 font-semibold">År:</label>
+              <label htmlFor="year" className="text-yellow-400 font-semibold">{t.yearLabel}</label>
               <input type="number" id="year" value={year} onChange={e => setYear(e.target.value)} className="bg-gray-700 text-white rounded px-3 py-1 w-24" />
             </div>
             <YearOverviewTab year={year} />
