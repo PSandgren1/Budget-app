@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bar, Pie } from 'react-chartjs-2';
+import { Bar, Pie, Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -8,9 +8,12 @@ import {
   ArcElement,
   Tooltip,
   Legend,
+  LineController,
+  PointElement,
+  LineElement
 } from 'chart.js';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend, LineController, PointElement, LineElement);
 
 interface DiagramProps {
   incomes: { amount: number; category?: string }[];
@@ -56,6 +59,66 @@ const DiagramTab: React.FC<DiagramProps> = ({ incomes, expenses, savings }) => {
     ],
   };
 
+  // Linjediagram: inkomster, utgifter, sparande per månad över året
+  const year = new Date().getFullYear();
+  const months = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
+  const monthLabels = months.map(m => m.slice(5));
+  const incomePerMonth = months.map(month => {
+    const data = localStorage.getItem(`budget-data-${month}`);
+    if (!data) return 0;
+    return (JSON.parse(data).incomes || []).reduce((sum: number, i: any) => sum + i.amount, 0);
+  });
+  const expensePerMonth = months.map(month => {
+    const data = localStorage.getItem(`budget-data-${month}`);
+    if (!data) return 0;
+    return (JSON.parse(data).expenses || []).reduce((sum: number, e: any) => sum + e.amount, 0);
+  });
+  const savingsPerMonth = months.map(month => {
+    const data = localStorage.getItem(`budget-data-${month}`);
+    if (!data) return 0;
+    return (JSON.parse(data).savingsList || []).reduce((sum: number, s: any) => sum + s.amount, 0);
+  });
+  const lineData = {
+    labels: monthLabels,
+    datasets: [
+      {
+        label: 'Inkomster',
+        data: incomePerMonth,
+        borderColor: '#34d399',
+        backgroundColor: '#34d399',
+        tension: 0.2,
+        fill: false,
+      },
+      {
+        label: 'Utgifter',
+        data: expensePerMonth,
+        borderColor: '#f87171',
+        backgroundColor: '#f87171',
+        tension: 0.2,
+        fill: false,
+      },
+      {
+        label: 'Sparande',
+        data: savingsPerMonth,
+        borderColor: '#fbbf24',
+        backgroundColor: '#fbbf24',
+        tension: 0.2,
+        fill: false,
+      },
+    ],
+  };
+
+  // Om ingen data finns, visa info istället för blank sida
+  const hasAnyData = incomeSum > 0 || expenseSum > 0 || savingsSum > 0 || Object.values(expenseCategoryMap).some(v => v > 0);
+
+  if (!hasAnyData) {
+    return (
+      <div className="w-full bg-gray-800 p-6 rounded-lg shadow-xl text-center text-yellow-300">
+        Ingen data att visa ännu. Lägg till inkomster, utgifter eller sparande för att se diagram.
+      </div>
+    );
+  }
+
   return (
     <div className="w-full"> {/* Tar hela bredden av föräldern */}
       <div className="flex flex-col md:flex-row gap-10 w-full">
@@ -67,6 +130,10 @@ const DiagramTab: React.FC<DiagramProps> = ({ incomes, expenses, savings }) => {
           <h2 className="text-xl font-semibold text-yellow-400 mb-4">Översikt denna månad</h2>
           <Bar data={barData} />
         </div>
+      </div>
+      <div className="mt-10 bg-gray-800 p-6 rounded-lg shadow-xl">
+        <h2 className="text-xl font-semibold text-yellow-400 mb-4">Inkomster, utgifter och sparande över året</h2>
+        <Line data={lineData} />
       </div>
     </div>
   );
