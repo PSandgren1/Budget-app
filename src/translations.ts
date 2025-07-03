@@ -40,6 +40,8 @@ const translations = {
     existingRecurringExpenses: 'Befintliga återkommande utgifter',
     noRecurringExpenses: 'Inga återkommande utgifter tillagda.',
     confirmDeleteRecurring: 'Är du säker på att du vill ta bort denna återkommande utgift?',
+    incomeNamePlaceholder: 'Namn på inkomst',
+    amountPlaceholder: 'Belopp',
     categories: [
       'Boende', 'Mat', 'Transport', 'Nöjen', 'Hälsa', 'Shopping', 'Övrigt'
     ],
@@ -84,10 +86,14 @@ const translations = {
     existingRecurringExpenses: 'Existing Recurring Expenses',
     noRecurringExpenses: 'No recurring expenses added.',
     confirmDeleteRecurring: 'Are you sure you want to delete this recurring expense?',
+    incomeNamePlaceholder: 'Income name',
+    amountPlaceholder: 'Amount',
     categories: [
       'Housing', 'Food', 'Transport', 'Entertainment', 'Health', 'Shopping', 'Other'
     ],
   }
 };
+
+export type Translation = typeof translations['sv'];
 
 export default translations;

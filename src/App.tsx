@@ -1,9 +1,13 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import TrashIcon from './assets/icons/TrashIcon.tsx';
-import PlusIcon from './assets/icons/PlusIcon.tsx';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import DiagramTab from './DiagramTab';
 import YearOverviewTab from './YearOverviewTab';
-import translations from './translations';
+import translations, { type Translation } from './translations';
+import Incomes from './components/Incomes';
+import Expenses from './components/Expenses';
+import Savings from './components/Savings';
+import Totals from './components/Totals';
+import AddEntryForm from './components/AddEntryForm';
+import RecurringExpenses from './RecurringExpenses';
 
 const SUPPORTED_CURRENCIES = [
   { code: 'SEK', label: 'SEK (kr)' },
@@ -18,6 +22,15 @@ const getCurrentMonth = () => {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 };
 
+// Hook to get the previous value of a prop or state
+function usePrevious<T>(value: T): T | undefined {
+  const ref = useRef<T>();
+  useEffect(() => {
+    ref.current = value;
+  });
+  return ref.current;
+}
+
 const App: React.FC = () => {
   // Tabbar och månadsväljare
   const [activeTab, setActiveTab] = useState<'budget' | 'diagram' | 'year'>('budget');
@@ -25,49 +38,74 @@ const App: React.FC = () => {
   const [year, setYear] = useState(new Date().getFullYear().toString());
 
   // Budgetdata per månad
-  const [data, setData] = useState(() => {
-    const saved = localStorage.getItem(`budget-data-${getCurrentMonth()}`);
-    return saved ? JSON.parse(saved) : { incomes: [], expenses: [], savingsList: [], maxSavings: 0 };
-  });
+  const [incomes, setIncomes] = useState<any[]>([]);
+  const [expenses, setExpenses] = useState<any[]>([]);
+  const [savingsList, setSavingsList] = useState<any[]>([]);
 
   // Formfält
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
   const [isRecurring, setIsRecurring] = useState(false);
-  const [maxSavings, setMaxSavings] = useState(data.maxSavings || 10000);
+  const [maxSavings, setMaxSavings] = useState(10000);
   const [currency, setCurrency] = useState(() => localStorage.getItem('budget-currency') || 'SEK');
 
   // State for recurring expenses
-  const [recurringExpenses, setRecurringExpenses] = useState(() => {
+  const [recurringExpenses, setRecurringExpenses] = useState<any[]>(() => {
     const saved = localStorage.getItem('budget-recurring-expenses');
     return saved ? JSON.parse(saved) : [];
   });
 
+  const prevSelectedMonth = usePrevious(selectedMonth);
 
-  // Synka data med localStorage när månad byts
+  // Kombinerad logik för att spara föregående månad och ladda aktuell månad
   useEffect(() => {
-    const saved = localStorage.getItem(`budget-data-${selectedMonth}`);
-    if (saved) {
-      const parsedData = JSON.parse(saved);
-      setData(parsedData);
+    // Spara bara om det finns en föregående månad och den har ändrats
+    if (prevSelectedMonth && prevSelectedMonth !== selectedMonth) {
+      const dataToSave = {
+        incomes,
+        expenses,
+        savingsList,
+        maxSavings,
+        currency,
+      };
+      console.log(`Saving data for ${prevSelectedMonth}`, dataToSave);
+      localStorage.setItem(`budget-data-${prevSelectedMonth}`, JSON.stringify(dataToSave));
+    }
+
+    // Ladda sedan data för den valda månaden
+    console.log(`Loading data for ${selectedMonth}`);
+    const savedData = localStorage.getItem(`budget-data-${selectedMonth}`);
+    if (savedData) {
+      const parsedData = JSON.parse(savedData);
+      setIncomes(parsedData.incomes || []);
+      setExpenses(parsedData.expenses || []);
+      setSavingsList(parsedData.savingsList || []);
       setMaxSavings(parsedData.maxSavings || 10000);
-      // Uppdatera även valutan om den finns sparad för månaden
       if (parsedData.currency) {
         setCurrency(parsedData.currency);
       }
     } else {
-      // Återställ till ett tomt state för den nya månaden
-      setData({ incomes: [], expenses: [], savingsList: [], maxSavings: 10000, currency });
-      setMaxSavings(10000); // Återställ även maxSavings i state
+      // Om ingen data finns, återställ till ett tomt state
+      setIncomes([]);
+      setExpenses([]);
+      setSavingsList([]);
+      setMaxSavings(10000);
     }
+    // Denna effekt ska ENDAST köras när selectedMonth ändras.
+    // Vi hanterar state-uppdateringar för data i en separat effekt.
   }, [selectedMonth]);
 
-  // Spara data till localStorage vid ändring
+  // Spara data till localStorage när datan ändras
   useEffect(() => {
-    localStorage.setItem(`budget-data-${selectedMonth}`,
-      JSON.stringify({ ...data, maxSavings, currency })); // Spara även valutan
-  }, [data, selectedMonth, maxSavings, currency]);
+    // Undvik att spara en tom state direkt efter en månadsbyte,
+    // låt laddningseffekten hantera det initiala statet.
+    if (prevSelectedMonth === selectedMonth || !prevSelectedMonth) {
+      const dataToSave = { incomes, expenses, savingsList, maxSavings, currency };
+      console.log(`Saving data for current month ${selectedMonth} due to data change`);
+      localStorage.setItem(`budget-data-${selectedMonth}`, JSON.stringify(dataToSave));
+    }
+  }, [incomes, expenses, savingsList, maxSavings, currency]);
 
   useEffect(() => {
     localStorage.setItem('budget-currency', currency);
@@ -78,11 +116,11 @@ const App: React.FC = () => {
   }, [recurringExpenses]);
 
   // Summeringar
-  const totalIncomes = useMemo(() => (data.incomes || []).reduce((sum: number, item: any) => sum + item.amount, 0), [data]);
-  const totalExpenses = useMemo(() => (data.expenses || []).reduce((sum: number, item: any) => sum + item.amount, 0), [data]);
-  const unpaidExpenses = useMemo(() => (data.expenses || []).filter((item: any) => !item.paid).reduce((sum: number, item: any) => sum + item.amount, 0), [data]);
+  const totalIncomes = useMemo(() => incomes.reduce((sum, item) => sum + item.amount, 0), [incomes]);
+  const totalExpenses = useMemo(() => expenses.reduce((sum, item) => sum + item.amount, 0), [expenses]);
+  const unpaidExpenses = useMemo(() => expenses.filter(item => !item.paid).reduce((sum, item) => sum + item.amount, 0), [expenses]);
   const savings = useMemo(() => totalIncomes - totalExpenses, [totalIncomes, totalExpenses]);
-  const totalSaved = useMemo(() => (data.savingsList || []).reduce((sum: number, item: any) => sum + item.amount, 0), [data]);
+  const totalSaved = useMemo(() => savingsList.reduce((sum, item) => sum + item.amount, 0), [savingsList]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('sv-SE', { style: 'currency', currency }).format(amount);
@@ -91,10 +129,7 @@ const App: React.FC = () => {
   // Lägg till inkomst
   const addIncome = () => {
     if (!description || !amount) return;
-    setData((prev: any) => ({
-      ...prev,
-      incomes: [...(prev.incomes || []), { id: Date.now(), description, amount: parseFloat(amount) }],
-    }));
+    setIncomes(prev => [...prev, { id: Date.now(), description, amount: parseFloat(amount) }]);
     setDescription('');
     setAmount('');
   };
@@ -104,10 +139,7 @@ const App: React.FC = () => {
     if (!description || !amount) return;
     const newExpense = { id: Date.now(), description, amount: parseFloat(amount), category, paid: false };
 
-    setData((prev: any) => ({
-      ...prev,
-      expenses: [...(prev.expenses || []), newExpense],
-    }));
+    setExpenses(prev => [...prev, newExpense]);
 
     if (isRecurring) {
       const exists = recurringExpenses.some((exp: any) => 
@@ -130,12 +162,9 @@ const App: React.FC = () => {
 
   // Markera utgift som betald/obetalad
   const toggleExpensePaid = (id: number) => {
-    setData((prev: any) => ({
-      ...prev,
-      expenses: (prev.expenses || []).map((item: any) =>
-        item.id === id ? { ...item, paid: !item.paid } : item
-      ),
-    }));
+    setExpenses(prev => prev.map(item =>
+      item.id === id ? { ...item, paid: !item.paid } : item
+    ));
   };
 
   // Lägg till sparande
@@ -151,20 +180,20 @@ const App: React.FC = () => {
       alert('Du kan inte spara mer än det möjliga sparbeloppet!');
       return;
     }
-    setData((prev: any) => ({
-      ...prev,
-      savingsList: [...(prev.savingsList || []), { id: Date.now(), description, amount: val }],
-    }));
+    setSavingsList(prev => [...prev, { id: Date.now(), description, amount: val }]);
     setDescription('');
     setAmount('');
   };
 
   // Ta bort post
-  const removeItem = (type: 'income' | 'expense' | 'saving', id: number) => {
-    setData((prev: any) => ({
-      ...prev,
-      [type === 'saving' ? 'savingsList' : type + 's']: (prev[type === 'saving' ? 'savingsList' : type + 's'] || []).filter((item: any) => item.id !== id),
-    }));
+  const removeIncome = (id: number) => {
+    setIncomes(prev => prev.filter(item => item.id !== id));
+  };
+  const removeExpense = (id: number) => {
+    setExpenses(prev => prev.filter(item => item.id !== id));
+  };
+  const removeSaving = (id: number) => {
+    setSavingsList(prev => prev.filter(item => item.id !== id));
   };
 
   // ---- Recurring Expenses Logic ----
@@ -175,8 +204,8 @@ const App: React.FC = () => {
   };
 
   const addRecurringExpensesToMonth = () => {
-    const newExpensesToAdd = recurringExpenses.filter((rec: any) =>
-      !data.expenses.some((exp: any) => exp.description === rec.description && exp.amount === rec.amount && exp.category === rec.category)
+    const newExpensesToAdd = recurringExpenses.filter(rec =>
+      !expenses.some(exp => exp.description === rec.description && exp.amount === rec.amount && exp.category === rec.category)
     );
 
     if (newExpensesToAdd.length === 0) {
@@ -190,10 +219,7 @@ const App: React.FC = () => {
       paid: false,
     }));
 
-    setData((prev: any) => ({
-      ...prev,
-      expenses: [...prev.expenses, ...expensesWithIds],
-    }));
+    setExpenses(prev => [...prev, ...expensesWithIds]);
   };
   // --------------------------------
 
@@ -201,9 +227,9 @@ const App: React.FC = () => {
   const exportCSV = () => {
     const rows = [
       ['Typ', 'Beskrivning', 'Belopp', 'Kategori'],
-      ...(data.incomes || []).map((i: any) => ['Inkomst', i.description, i.amount, '']),
-      ...(data.expenses || []).map((e: any) => ['Utgift', e.description, e.amount, e.category]),
-      ...(data.savingsList || []).map((s: any) => ['Sparande', '', s.amount, '']),
+      ...incomes.map(i => ['Inkomst', i.description, i.amount, '']),
+      ...expenses.map(e => ['Utgift', e.description, e.amount, e.category]),
+      ...savingsList.map(s => ['Sparande', '', s.amount, '']),
     ];
     const csv = rows.map(r => r.join(';')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -223,14 +249,16 @@ const App: React.FC = () => {
     reader.onload = (evt) => {
       const text = evt.target?.result as string;
       const lines = text.split('\n').slice(1); // hoppa header
-      const incomes: any[] = [], expenses: any[] = [], savingsList: any[] = [];
+      const newIncomes: any[] = [], newExpenses: any[] = [], newSavingsList: any[] = [];
       lines.forEach(line => {
         const [typ, desc, belopp, kat] = line.split(';');
-        if (typ === 'Inkomst') incomes.push({ id: Date.now() + Math.random(), description: desc, amount: parseFloat(belopp) });
-        if (typ === 'Utgift') expenses.push({ id: Date.now() + Math.random(), description: desc, amount: parseFloat(belopp), category: kat });
-        if (typ === 'Sparande') savingsList.push({ id: Date.now() + Math.random(), amount: parseFloat(belopp) });
+        if (typ === 'Inkomst') newIncomes.push({ id: Date.now() + Math.random(), description: desc, amount: parseFloat(belopp) });
+        if (typ === 'Utgift') newExpenses.push({ id: Date.now() + Math.random(), description: desc, amount: parseFloat(belopp), category: kat });
+        if (typ === 'Sparande') newSavingsList.push({ id: Date.now() + Math.random(), amount: parseFloat(belopp) });
       });
-      setData({ incomes, expenses, savingsList, maxSavings });
+      setIncomes(newIncomes);
+      setExpenses(newExpenses);
+      setSavingsList(newSavingsList);
     };
     reader.readAsText(file);
   };
@@ -239,19 +267,8 @@ const App: React.FC = () => {
   const [expenseSearch, setExpenseSearch] = useState('');
   const [showOnlyUnpaid, setShowOnlyUnpaid] = useState(false);
 
-  const filteredExpenses = useMemo(() => {
-    return (data.expenses || [])
-      .filter((item: any) =>
-        (!showOnlyUnpaid || !item.paid) &&
-        (
-          item.description.toLowerCase().includes(expenseSearch.toLowerCase()) ||
-          (item.category && item.category.toLowerCase().includes(expenseSearch.toLowerCase()))
-        )
-      );
-  }, [data.expenses, expenseSearch, showOnlyUnpaid]);
-
   const [language, setLanguage] = useState(() => localStorage.getItem('budget-lang') || 'sv');
-  const t = translations[language as 'sv' | 'en'];
+  const t = translations[language as 'sv' | 'en'] as Translation;
 
   useEffect(() => {
     localStorage.setItem('budget-lang', language);
@@ -296,172 +313,68 @@ const App: React.FC = () => {
         {/* Tabbinnehåll */}
         {activeTab === 'budget' && (
           <>
-            <header className="mb-10 p-4 sm:p-6 bg-gray-800 rounded-lg shadow-xl">
-              <h1 className="text-3xl sm:text-4xl font-bold text-yellow-400 mb-4 sm:mb-6 text-center">Månadsbudget</h1>
-              <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 text-center">
-                <div className="bg-gray-700 p-3 sm:p-4 rounded-lg shadow-md">
-                  <h2 className="text-base sm:text-lg text-green-400">{t.totalIncomes}</h2>
-                  <p className="text-xl sm:text-2xl font-semibold">{formatCurrency(totalIncomes)}</p>
-                </div>
-                <div className="bg-gray-700 p-3 sm:p-4 rounded-lg shadow-md">
-                  <h2 className="text-base sm:text-lg text-red-400">{t.totalExpenses}</h2>
-                  <p className="text-xl sm:text-2xl font-semibold">{formatCurrency(totalExpenses)}</p>
-                </div>
-                <div className={`bg-gray-700 p-3 sm:p-4 rounded-lg shadow-md ${savings < 0 ? 'border border-red-500' : 'border border-yellow-400'}`}> 
-                  <h2 className="text-base sm:text-lg text-yellow-400">{t.toSave}</h2>
-                  <p className={`text-xl sm:text-2xl font-semibold ${savings < 0 ? 'text-red-500' : 'text-yellow-400'}`}>{formatCurrency(savings)}</p>
-                  <div className="text-xs text-gray-300 mt-1 sm:mt-2">
-                    {savings > 0
-                      ? `${t.leftToSave}: ${formatCurrency(Math.max(0, savings - totalSaved))}`
-                      : `${t.leftToSave}: 0 kr`}
-                  </div>
-                </div>
-                {/* Sparande-box */}
-                <div className="bg-gray-700 p-3 sm:p-4 rounded-lg shadow-md flex flex-col items-center">
-                  <h2 className="text-base sm:text-lg text-blue-400">{t.savings}</h2>
-                  <p className="text-xl sm:text-2xl font-semibold">{formatCurrency(savings > 0 ? savings : 0)}</p>
-                  <div className="mt-1 sm:mt-2 w-full bg-gray-600 rounded h-3">
-                    <div className="bg-yellow-400 h-3 rounded" style={{ width: `${savings > 0 ? Math.min(100, (totalSaved / savings) * 100) : 0}%` }}></div>
-                  </div>
-                  <div className="text-xs text-gray-300 mt-1">{savings > 0 ? Math.round((totalSaved / savings) * 100) : 0}% {t.percentOfPossible}</div>
-                </div>
-              </div>
-            </header>
-            <section className="mb-10 p-4 sm:p-6 bg-gray-800 rounded-lg shadow-xl">
-              <h2 className="text-xl sm:text-2xl font-semibold text-yellow-400 mb-3 sm:mb-4">{t.addEntry}</h2>
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-3 sm:mb-4">
-                <input type="text" placeholder={t.description} value={description} onChange={e => setDescription(e.target.value)} className="flex-grow p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent outline-none" />
-                <input type="number" placeholder={`${t.amount} (SEK)`} value={amount} onChange={e => setAmount(e.target.value)} className="p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent outline-none md:w-48" />
-                <select value={category} onChange={e => setCategory(e.target.value)} className="p-3 bg-gray-700 border border-gray-600 rounded-lg text-white md:w-48">
-                  {EXPENSE_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                </select>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-4 items-start">
-                <div className="flex-grow flex flex-col sm:flex-row gap-3 sm:gap-4">
-                  <button onClick={addIncome} className="flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 w-full sm:w-auto">
-                    <PlusIcon className="w-5 h-5" /> {t.addIncome}
-                  </button>
-                  <button onClick={addExpense} className="flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 w-full sm:w-auto">
-                    <PlusIcon className="w-5 h-5" /> {t.addExpense}
-                  </button>
-                  <button onClick={addSaving} className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 w-full sm:w-auto">
-                    <PlusIcon className="w-5 h-5" /> {t.addSaving}
-                  </button>
-                </div>
-                <div className="flex items-center gap-2 p-3 bg-gray-700/50 rounded-lg mt-2 sm:mt-0">
-                  <input id="recurring-checkbox" type="checkbox" checked={isRecurring} onChange={e => setIsRecurring(e.target.checked)} className="w-5 h-5 accent-yellow-400" />
-                  <label htmlFor="recurring-checkbox" className="font-semibold text-yellow-400 cursor-pointer">{t.recurringExpenses}</label>
-                </div>
-              </div>
-            </section>
+            <Totals
+              t={t}
+              formatCurrency={formatCurrency}
+              totalIncomes={totalIncomes}
+              totalExpenses={totalExpenses}
+              savings={savings}
+              totalSaved={totalSaved}
+            />
+            <AddEntryForm
+              description={description}
+              setDescription={setDescription}
+              amount={amount}
+              setAmount={setAmount}
+              category={category}
+              setCategory={setCategory}
+              isRecurring={isRecurring}
+              setIsRecurring={setIsRecurring}
+              addIncome={addIncome}
+              addExpense={addExpense}
+              addSaving={addSaving}
+              t={t}
+              categories={EXPENSE_CATEGORIES}
+            />
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-10">
-              <section className="p-6 bg-gray-800 rounded-lg shadow-xl">
-                <h2 className="text-2xl font-semibold text-green-400 mb-4 border-b-2 border-yellow-400 pb-2">{t.incomes}</h2>
-                <ul>
-                  {(data.incomes || []).map((item: any) => (
-                    <li key={item.id} className="flex justify-between items-center p-3 mb-2 bg-gray-700 rounded-lg shadow-sm hover:bg-gray-600 transition duration-150">
-                      <span>{item.description}</span>
-                      <div className="flex items-center gap-3">
-                        <span className="font-medium text-green-300">{formatCurrency(item.amount)}</span>
-                        <button onClick={() => removeItem('income', item.id)} className="text-gray-400 hover:text-red-400 transition duration-150">
-                          <TrashIcon />
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-              <section className="p-6 bg-gray-800 rounded-lg shadow-xl">
-                <h2 className="text-2xl font-semibold text-red-400 mb-4 border-b-2 border-yellow-400 pb-2">{t.expenses}</h2>
-                <div className="mb-2 flex flex-col sm:flex-row gap-2 sm:items-center">
-                  <input
-                    type="text"
-                    placeholder={t.searchExpense}
-                    value={expenseSearch}
-                    onChange={e => setExpenseSearch(e.target.value)}
-                    className="p-2 bg-gray-700 border border-gray-600 rounded-lg text-white w-full max-w-[180px] sm:max-w-[220px]"
-                  />
-                  <button
-                    onClick={() => setShowOnlyUnpaid(v => !v)}
-                    className={`px-3 py-2 rounded-lg font-semibold border transition text-sm whitespace-nowrap ${showOnlyUnpaid ? 'bg-red-500 text-white border-red-600' : 'bg-gray-700 text-red-300 border-gray-600'}`}
-                  >
-                    {showOnlyUnpaid ? t.showAll : t.showOnlyUnpaid}
-                  </button>
-                </div>
-                <div className="mb-4 bg-red-900/80 rounded-lg p-3 text-red-200 font-semibold flex items-center gap-2">
-                  <span>{t.unpaidExpenses}:</span>
-                  <span className="text-lg">{formatCurrency(unpaidExpenses)}</span>
-                </div>
-                <ul>
-                  {filteredExpenses.map((item: any) => (
-                    <li key={item.id} className={`flex justify-between items-center p-3 mb-2 rounded-lg shadow-sm transition duration-150 ${item.paid ? 'bg-green-700/80 hover:bg-green-600/80' : 'bg-gray-700 hover:bg-gray-600'}`}> 
-                      <div className="flex items-center gap-2">
-                        <input type="checkbox" checked={!!item.paid} onChange={() => toggleExpensePaid(item.id)} className="accent-green-500 w-5 h-5" title="Markera som betald" />
-                        <span className={item.paid ? 'line-through text-green-200' : ''}>{item.description} <span className="text-xs text-yellow-300">({item.category})</span></span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className={`font-medium ${item.paid ? 'text-green-200' : 'text-red-300'}`}>{formatCurrency(item.amount)}</span>
-                        <button onClick={() => removeItem('expense', item.id)} className="text-gray-400 hover:text-red-400 transition duration-150">
-                          <TrashIcon />
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-              <section className="p-6 bg-gray-800 rounded-lg shadow-xl">
-                <h2 className="text-2xl font-semibold text-blue-400 mb-4 border-b-2 border-yellow-400 pb-2">{t.savingsList}</h2>
-                <ul>
-                  {(data.savingsList || []).map((item: any) => (
-                    <li key={item.id} className="flex justify-between items-center p-3 mb-2 bg-gray-700 rounded-lg shadow-sm hover:bg-gray-600 transition duration-150">
-                      <span>{item.description}</span>
-                      <div className="flex items-center gap-3">
-                        <span className="font-medium text-blue-300">{formatCurrency(item.amount)}</span>
-                        <button onClick={() => removeItem('saving', item.id)} className="text-gray-400 hover:text-red-400 transition duration-150">
-                          <TrashIcon />
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-4 text-right text-lg font-semibold text-blue-200">
-                  {t.totalSaved}: {formatCurrency(totalSaved)}
-                </div>
-              </section>
+              <Incomes
+                incomes={incomes}
+                removeIncome={removeIncome}
+                t={t}
+                formatCurrency={formatCurrency}
+              />
+              <Expenses
+                expenses={expenses}
+                removeExpense={removeExpense}
+                toggleExpensePaid={toggleExpensePaid}
+                t={t}
+                formatCurrency={formatCurrency}
+                expenseSearch={expenseSearch}
+                setExpenseSearch={setExpenseSearch}
+                showOnlyUnpaid={showOnlyUnpaid}
+                setShowOnlyUnpaid={setShowOnlyUnpaid}
+                unpaidExpenses={unpaidExpenses}
+              />
+              <Savings
+                savings={savingsList}
+                removeSaving={removeSaving}
+                t={t}
+                formatCurrency={formatCurrency}
+                totalSaved={totalSaved}
+              />
             </div>
-            {/* Recurring Expenses Section */}
-            <section className="mt-10 p-4 sm:p-6 bg-gray-800 rounded-lg shadow-xl">
-              <div className="flex justify-between items-center mb-3 border-b-2 border-yellow-400 pb-2">
-                <h2 className="text-xl sm:text-2xl font-semibold text-yellow-400">{t.existingRecurringExpenses}</h2>
-                <button onClick={addRecurringExpensesToMonth} className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">
-                  <PlusIcon className="w-5 h-5" /> {t.addToMonth}
-                </button>
-              </div>
-              <ul>
-                {recurringExpenses.length > 0 ? (
-                  recurringExpenses.map((item: any) => (
-                    <li key={item.id} className="flex justify-between items-center p-3 mb-2 bg-gray-700 rounded-lg shadow-sm hover:bg-gray-600 transition duration-150">
-                      <div>
-                        <span className="font-medium">{item.description}</span>
-                        <span className="text-sm text-yellow-300 ml-2">({item.category})</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="font-medium text-yellow-400">{formatCurrency(item.amount)}</span>
-                        <button onClick={() => removeRecurringExpense(item.id)} className="text-gray-400 hover:text-red-400 transition duration-150">
-                          <TrashIcon />
-                        </button>
-                      </div>
-                    </li>
-                  ))
-                ) : (
-                  <p className="text-gray-400 italic">{t.noRecurringExpenses}</p>
-                )}
-              </ul>
-            </section>
+            <RecurringExpenses
+              recurringExpenses={recurringExpenses}
+              removeRecurringExpense={removeRecurringExpense}
+              addRecurringExpensesToMonth={addRecurringExpensesToMonth}
+              t={t}
+              formatCurrency={formatCurrency}
+            />
           </>
         )}
         {activeTab === 'diagram' && (
-          <DiagramTab incomes={data.incomes || []} expenses={data.expenses || []} savings={data.savingsList || []} />
+          <DiagramTab incomes={incomes} expenses={expenses} savings={savingsList} />
         )}
         {activeTab === 'year' && (
           <div>
