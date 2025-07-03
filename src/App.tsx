@@ -223,20 +223,52 @@ const App: React.FC = () => {
   };
   // --------------------------------
 
-  // Exportera till CSV
-  const exportCSV = () => {
+  // Exportera all data till CSV
+  const exportAllDataCSV = () => {
     const rows = [
-      ['Typ', 'Beskrivning', 'Belopp', 'Kategori'],
-      ...incomes.map(i => ['Inkomst', i.description, i.amount, '']),
-      ...expenses.map(e => ['Utgift', e.description, e.amount, e.category]),
-      ...savingsList.map(s => ['Sparande', '', s.amount, '']),
+      ['År', 'Månad', 'Typ', 'Beskrivning', 'Belopp', 'Kategori', 'Betald']
     ];
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('budget-data-')) {
+        try {
+          const monthData = JSON.parse(localStorage.getItem(key)!);
+          const [year, month] = key.replace('budget-data-', '').split('-');
+
+          monthData.incomes?.forEach((item: any) => {
+            rows.push([year, month, t.income, item.description, item.amount.toString(), '', '']);
+          });
+          monthData.expenses?.forEach((item: any) => {
+            rows.push([year, month, t.expense, item.description, item.amount.toString(), item.category, item.paid ? t.yes : t.no]);
+          });
+          monthData.savingsList?.forEach((item: any) => {
+            rows.push([year, month, t.saving, item.description, item.amount.toString(), '', '']);
+          });
+        } catch (error) {
+          console.error(`Could not parse data for key: ${key}`, error);
+          // Gå vidare till nästa nyckel om en är korrupt
+        }
+      }
+    }
+
+    // Sortera rader baserat på år och månad
+    rows.sort((a, b) => {
+      if (a[0] === 'År') return -1; // Håll rubriken överst
+      if (b[0] === 'År') return 1;
+      const dateA = `${a[0]}-${a[1]}`;
+      const dateB = `${b[0]}-${b[1]}`;
+      return dateA.localeCompare(dateB);
+    });
+
     const csv = rows.map(r => r.join(';')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
+    // Lägg till BOM (Byte Order Mark) för att säkerställa att Excel hanterar UTF-8 korrekt
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `budget-${selectedMonth}.csv`;
+    const today = new Date().toISOString().slice(0, 10);
+    a.download = `budget-export-all-${today}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -304,7 +336,7 @@ const App: React.FC = () => {
               <option key={c.code} value={c.code}>{c.label}</option>
             ))}
           </select>
-          <button onClick={exportCSV} className="ml-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded h-12">{t.exportCSV}</button>
+          <button onClick={exportAllDataCSV} className="ml-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded h-12">{t.exportCSV}</button>
           <label className="ml-2 cursor-pointer bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded h-12 flex items-center">
             {t.importCSV}
             <input type="file" accept=".csv" onChange={importCSV} className="hidden" />
