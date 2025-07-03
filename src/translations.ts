@@ -34,6 +34,12 @@ const translations = {
     english: 'Engelska',
     lightTheme: 'Ljust tema',
     darkTheme: 'Mörkt tema',
+    recurringExpenses: 'Återkommande utgifter',
+    addRecurringExpense: 'Lägg till återkommande utgift',
+    addToMonth: 'Lägg till i månad',
+    existingRecurringExpenses: 'Befintliga återkommande utgifter',
+    noRecurringExpenses: 'Inga återkommande utgifter tillagda.',
+    confirmDeleteRecurring: 'Är du säker på att du vill ta bort denna återkommande utgift?',
     categories: [
       'Boende', 'Mat', 'Transport', 'Nöjen', 'Hälsa', 'Shopping', 'Övrigt'
     ],
@@ -72,6 +78,12 @@ const translations = {
     english: 'English',
     lightTheme: 'Light theme',
     darkTheme: 'Dark theme',
+    recurringExpenses: 'Recurring Expenses',
+    addRecurringExpense: 'Add Recurring Expense',
+    addToMonth: 'Add to Month',
+    existingRecurringExpenses: 'Existing Recurring Expenses',
+    noRecurringExpenses: 'No recurring expenses added.',
+    confirmDeleteRecurring: 'Are you sure you want to delete this recurring expense?',
     categories: [
       'Housing', 'Food', 'Transport', 'Entertainment', 'Health', 'Shopping', 'Other'
     ],

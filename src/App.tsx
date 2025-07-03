@@ -34,29 +34,48 @@ const App: React.FC = () => {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
+  const [isRecurring, setIsRecurring] = useState(false);
   const [maxSavings, setMaxSavings] = useState(data.maxSavings || 10000);
   const [currency, setCurrency] = useState(() => localStorage.getItem('budget-currency') || 'SEK');
+
+  // State for recurring expenses
+  const [recurringExpenses, setRecurringExpenses] = useState(() => {
+    const saved = localStorage.getItem('budget-recurring-expenses');
+    return saved ? JSON.parse(saved) : [];
+  });
+
 
   // Synka data med localStorage när månad byts
   useEffect(() => {
     const saved = localStorage.getItem(`budget-data-${selectedMonth}`);
     if (saved) {
-      setData(JSON.parse(saved));
-      setMaxSavings(JSON.parse(saved).maxSavings || 10000);
+      const parsedData = JSON.parse(saved);
+      setData(parsedData);
+      setMaxSavings(parsedData.maxSavings || 10000);
+      // Uppdatera även valutan om den finns sparad för månaden
+      if (parsedData.currency) {
+        setCurrency(parsedData.currency);
+      }
     } else {
-      setData({ incomes: [], expenses: [], savingsList: [], maxSavings, currency });
+      // Återställ till ett tomt state för den nya månaden
+      setData({ incomes: [], expenses: [], savingsList: [], maxSavings: 10000, currency });
+      setMaxSavings(10000); // Återställ även maxSavings i state
     }
   }, [selectedMonth]);
 
   // Spara data till localStorage vid ändring
   useEffect(() => {
     localStorage.setItem(`budget-data-${selectedMonth}`,
-      JSON.stringify({ ...data, maxSavings }));
-  }, [data, selectedMonth, maxSavings]);
+      JSON.stringify({ ...data, maxSavings, currency })); // Spara även valutan
+  }, [data, selectedMonth, maxSavings, currency]);
 
   useEffect(() => {
     localStorage.setItem('budget-currency', currency);
   }, [currency]);
+
+  useEffect(() => {
+    localStorage.setItem('budget-recurring-expenses', JSON.stringify(recurringExpenses));
+  }, [recurringExpenses]);
 
   // Summeringar
   const totalIncomes = useMemo(() => (data.incomes || []).reduce((sum: number, item: any) => sum + item.amount, 0), [data]);
@@ -83,12 +102,30 @@ const App: React.FC = () => {
   // Lägg till utgift
   const addExpense = () => {
     if (!description || !amount) return;
+    const newExpense = { id: Date.now(), description, amount: parseFloat(amount), category, paid: false };
+
     setData((prev: any) => ({
       ...prev,
-      expenses: [...(prev.expenses || []), { id: Date.now(), description, amount: parseFloat(amount), category, paid: false }],
+      expenses: [...(prev.expenses || []), newExpense],
     }));
+
+    if (isRecurring) {
+      const exists = recurringExpenses.some((exp: any) => 
+        exp.description === description && 
+        exp.amount === parseFloat(amount) && 
+        exp.category === category
+      );
+      if (!exists) {
+        setRecurringExpenses((prev: any) => [
+          ...prev,
+          { id: Date.now() + Math.random(), description, amount: parseFloat(amount), category }
+        ]);
+      }
+    }
+
     setDescription('');
     setAmount('');
+    setIsRecurring(false);
   };
 
   // Markera utgift som betald/obetalad
@@ -129,6 +166,36 @@ const App: React.FC = () => {
       [type === 'saving' ? 'savingsList' : type + 's']: (prev[type === 'saving' ? 'savingsList' : type + 's'] || []).filter((item: any) => item.id !== id),
     }));
   };
+
+  // ---- Recurring Expenses Logic ----
+  const removeRecurringExpense = (id: number) => {
+    if (window.confirm(t.confirmDeleteRecurring)) {
+      setRecurringExpenses((prev: any) => prev.filter((item: any) => item.id !== id));
+    }
+  };
+
+  const addRecurringExpensesToMonth = () => {
+    const newExpensesToAdd = recurringExpenses.filter((rec: any) =>
+      !data.expenses.some((exp: any) => exp.description === rec.description && exp.amount === rec.amount && exp.category === rec.category)
+    );
+
+    if (newExpensesToAdd.length === 0) {
+      alert("Alla återkommande utgifter finns redan i denna månad.");
+      return;
+    }
+
+    const expensesWithIds = newExpensesToAdd.map((exp: any) => ({
+      ...exp,
+      id: Date.now() + Math.random(),
+      paid: false,
+    }));
+
+    setData((prev: any) => ({
+      ...prev,
+      expenses: [...prev.expenses, ...expensesWithIds],
+    }));
+  };
+  // --------------------------------
 
   // Exportera till CSV
   const exportCSV = () => {
@@ -269,16 +336,22 @@ const App: React.FC = () => {
                   {EXPENSE_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
               </div>
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                <button onClick={addIncome} className="flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 w-full md:w-auto">
-                  <PlusIcon className="w-5 h-5" /> {t.addIncome}
-                </button>
-                <button onClick={addExpense} className="flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 w-full md:w-auto">
-                  <PlusIcon className="w-5 h-5" /> {t.addExpense}
-                </button>
-                <button onClick={addSaving} className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 w-full md:w-auto">
-                  <PlusIcon className="w-5 h-5" /> {t.addSaving}
-                </button>
+              <div className="flex flex-col sm:flex-row gap-4 items-start">
+                <div className="flex-grow flex flex-col sm:flex-row gap-3 sm:gap-4">
+                  <button onClick={addIncome} className="flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 w-full sm:w-auto">
+                    <PlusIcon className="w-5 h-5" /> {t.addIncome}
+                  </button>
+                  <button onClick={addExpense} className="flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 w-full sm:w-auto">
+                    <PlusIcon className="w-5 h-5" /> {t.addExpense}
+                  </button>
+                  <button onClick={addSaving} className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 w-full sm:w-auto">
+                    <PlusIcon className="w-5 h-5" /> {t.addSaving}
+                  </button>
+                </div>
+                <div className="flex items-center gap-2 p-3 bg-gray-700/50 rounded-lg mt-2 sm:mt-0">
+                  <input id="recurring-checkbox" type="checkbox" checked={isRecurring} onChange={e => setIsRecurring(e.target.checked)} className="w-5 h-5 accent-yellow-400" />
+                  <label htmlFor="recurring-checkbox" className="font-semibold text-yellow-400 cursor-pointer">{t.recurringExpenses}</label>
+                </div>
               </div>
             </section>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-10">
@@ -356,6 +429,35 @@ const App: React.FC = () => {
                 </div>
               </section>
             </div>
+            {/* Recurring Expenses Section */}
+            <section className="mt-10 p-4 sm:p-6 bg-gray-800 rounded-lg shadow-xl">
+              <div className="flex justify-between items-center mb-3 border-b-2 border-yellow-400 pb-2">
+                <h2 className="text-xl sm:text-2xl font-semibold text-yellow-400">{t.existingRecurringExpenses}</h2>
+                <button onClick={addRecurringExpensesToMonth} className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105">
+                  <PlusIcon className="w-5 h-5" /> {t.addToMonth}
+                </button>
+              </div>
+              <ul>
+                {recurringExpenses.length > 0 ? (
+                  recurringExpenses.map((item: any) => (
+                    <li key={item.id} className="flex justify-between items-center p-3 mb-2 bg-gray-700 rounded-lg shadow-sm hover:bg-gray-600 transition duration-150">
+                      <div>
+                        <span className="font-medium">{item.description}</span>
+                        <span className="text-sm text-yellow-300 ml-2">({item.category})</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-medium text-yellow-400">{formatCurrency(item.amount)}</span>
+                        <button onClick={() => removeRecurringExpense(item.id)} className="text-gray-400 hover:text-red-400 transition duration-150">
+                          <TrashIcon />
+                        </button>
+                      </div>
+                    </li>
+                  ))
+                ) : (
+                  <p className="text-gray-400 italic">{t.noRecurringExpenses}</p>
+                )}
+              </ul>
+            </section>
           </>
         )}
         {activeTab === 'diagram' && (
