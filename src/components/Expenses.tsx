@@ -159,37 +159,35 @@ const Expenses: React.FC<ExpensesProps> = ({
       <h2 className="text-xl sm:text-2xl font-semibold text-red-400 mb-3 sm:mb-4 border-b-2 border-yellow-400 pb-2">{t.expenses}</h2>
       
       {/* Search and filters */}
-      <div className="mb-3 sm:mb-4 flex flex-col gap-2">
-        <div className="flex flex-col sm:flex-row gap-2">
-          <input
-            type="text"
-            placeholder={t.searchExpense}
-            value={expenseSearch}
-            onChange={e => setExpenseSearch(e.target.value)}
-            className="flex-1 p-2 sm:p-3 text-base bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-yellow-400 focus:border-transparent outline-none"
-          />
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowOnlyUnpaid(v => !v)}
-              className={`flex-1 sm:flex-none px-3 py-2 rounded-lg font-semibold border transition text-sm whitespace-nowrap touch-manipulation ${
-                showOnlyUnpaid 
-                  ? 'bg-red-500 text-white border-red-600' 
-                  : 'bg-gray-700 text-red-300 border-gray-600'
-              }`}
-            >
-              {showOnlyUnpaid ? t.showAll : t.showOnlyUnpaid}
-            </button>
-            <button
-              onClick={() => setBulkMode(!bulkMode)}
-              className={`flex-1 sm:flex-none px-3 py-2 rounded-lg font-semibold border transition text-sm whitespace-nowrap touch-manipulation ${
-                bulkMode 
-                  ? 'bg-yellow-500 text-gray-900 border-yellow-600' 
-                  : 'bg-gray-700 text-yellow-300 border-gray-600'
-              }`}
-            >
-              {bulkMode ? 'Avsluta val' : 'Välj flera'}
-            </button>
-          </div>
+      <div className="mb-3 sm:mb-4 space-y-2">
+        <input
+          type="text"
+          placeholder={t.searchExpense}
+          value={expenseSearch}
+          onChange={e => setExpenseSearch(e.target.value)}
+          className="w-full p-2 sm:p-3 text-base bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-yellow-400 focus:border-transparent outline-none"
+        />
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowOnlyUnpaid(v => !v)}
+            className={`flex-1 sm:flex-none px-3 py-2 sm:py-3 rounded-lg font-semibold border transition text-sm whitespace-nowrap touch-manipulation ${
+              showOnlyUnpaid 
+                ? 'bg-red-500 text-white border-red-600' 
+                : 'bg-gray-700 text-red-300 border-gray-600'
+            }`}
+          >
+            {showOnlyUnpaid ? t.showAll : t.showOnlyUnpaid}
+          </button>
+          <button
+            onClick={() => setBulkMode(!bulkMode)}
+            className={`flex-1 sm:flex-none px-3 py-2 sm:py-3 rounded-lg font-semibold border transition text-sm whitespace-nowrap touch-manipulation ${
+              bulkMode 
+                ? 'bg-yellow-500 text-gray-900 border-yellow-600' 
+                : 'bg-gray-700 text-yellow-300 border-gray-600'
+            }`}
+          >
+            {bulkMode ? 'Avsluta val' : 'Välj flera'}
+          </button>
         </div>
       </div>
       
