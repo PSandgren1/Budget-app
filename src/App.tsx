@@ -8,6 +8,7 @@ import Savings from './components/Savings';
 import Totals from './components/Totals';
 import AddEntryForm from './components/AddEntryForm';
 import RecurringExpenses from './RecurringExpenses';
+import { useMonthSwipe } from './hooks/useMonthSwipe';
 
 const SUPPORTED_CURRENCIES = [
   { code: 'SEK', label: 'SEK (kr)' },
@@ -466,6 +467,27 @@ const App: React.FC = () => {
     setCategory(EXPENSE_CATEGORIES[0]);
   }, [language]);
 
+  // Month navigation functions
+  const goToNextMonth = () => {
+    const [year, month] = selectedMonth.split('-').map(Number);
+    const nextDate = new Date(year, month, 1); // month is 0-indexed in Date
+    const nextMonth = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`;
+    setSelectedMonth(nextMonth);
+  };
+
+  const goToPreviousMonth = () => {
+    const [year, month] = selectedMonth.split('-').map(Number);
+    const prevDate = new Date(year, month - 2, 1); // month-2 because month is 1-indexed but Date expects 0-indexed
+    const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+    setSelectedMonth(prevMonth);
+  };
+
+  // Month swipe gesture
+  const monthSwipeRef = useMonthSwipe({
+    onSwipeLeft: goToNextMonth,
+    onSwipeRight: goToPreviousMonth,
+  });
+
   // Bulk operations
   const toggleExpenseSelection = (id: number) => {
     setSelectedExpenses(prev => {
@@ -503,48 +525,118 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center py-10 px-4">
-      <div className="w-full max-w-6xl">
+    <div className="min-h-screen bg-gray-900 text-white">
+      <div ref={monthSwipeRef} className="w-full max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-10">
         {/* Språkväxlare */}
         <div className="flex justify-end mb-2 gap-2">
-          <select id="lang" value={language} onChange={e => setLanguage(e.target.value)}
-            className="bg-gray-700 text-white rounded px-2 py-1 border border-gray-600 focus:ring-2 focus:ring-yellow-400 focus:outline-none text-sm font-semibold flex items-center min-w-[90px]">
+          <select 
+            id="lang" 
+            value={language} 
+            onChange={e => setLanguage(e.target.value)}
+            className="bg-gray-700 text-white rounded px-2 py-1 border border-gray-600 focus:ring-2 focus:ring-yellow-400 focus:outline-none text-sm font-semibold min-w-[90px] touch-manipulation"
+          >
             <option value="sv">Svenska</option>
             <option value="en">English</option>
           </select>
         </div>
+        
         {/* Tabbar */}
-        <div className="flex gap-4 mb-8">
-          <button onClick={() => setActiveTab('budget')} className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'budget' ? 'bg-yellow-400 text-gray-900' : 'bg-gray-700 text-yellow-400'}`}>{t.budget}</button>
-          <button onClick={() => setActiveTab('diagram')} className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'diagram' ? 'bg-yellow-400 text-gray-900' : 'bg-gray-700 text-yellow-400'}`}>{t.diagram}</button>
-          <button onClick={() => setActiveTab('year')} className={`px-4 py-2 rounded-t-lg font-semibold ${activeTab === 'year' ? 'bg-yellow-400 text-gray-900' : 'bg-gray-700 text-yellow-400'}`}>{t.year}</button>
+        <div className="flex gap-2 sm:gap-4 mb-4 sm:mb-8 overflow-x-auto">
+          <button 
+            onClick={() => setActiveTab('budget')} 
+            className={`px-3 sm:px-4 py-2 rounded-t-lg font-semibold whitespace-nowrap touch-manipulation transition-colors ${
+              activeTab === 'budget' ? 'bg-yellow-400 text-gray-900' : 'bg-gray-700 text-yellow-400'
+            }`}
+          >
+            {t.budget}
+          </button>
+          <button 
+            onClick={() => setActiveTab('diagram')} 
+            className={`px-3 sm:px-4 py-2 rounded-t-lg font-semibold whitespace-nowrap touch-manipulation transition-colors ${
+              activeTab === 'diagram' ? 'bg-yellow-400 text-gray-900' : 'bg-gray-700 text-yellow-400'
+            }`}
+          >
+            {t.diagram}
+          </button>
+          <button 
+            onClick={() => setActiveTab('year')} 
+            className={`px-3 sm:px-4 py-2 rounded-t-lg font-semibold whitespace-nowrap touch-manipulation transition-colors ${
+              activeTab === 'year' ? 'bg-yellow-400 text-gray-900' : 'bg-gray-700 text-yellow-400'
+            }`}
+          >
+            {t.year}
+          </button>
         </div>
-        {/* Månadsväljare och valutaväljare */}
-        <div className="flex gap-4 mb-8 items-center flex-wrap">
-          <input type="month" id="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-gray-700 text-white rounded px-3 py-2 h-12 text-base border-none focus:ring-2 focus:ring-yellow-400 focus:outline-none" />
-          <select value={currency} onChange={e => setCurrency(e.target.value)} className="bg-gray-700 text-white rounded px-3 py-2 h-12 text-base border-none focus:ring-2 focus:ring-yellow-400 focus:outline-none">
-            {SUPPORTED_CURRENCIES.map(c => (
-              <option key={c.code} value={c.code}>{c.label}</option>
-            ))}
-          </select>
-          <button onClick={exportAllDataCSV} className="ml-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded h-12">{t.exportCSV}</button>
-          <label className="ml-2 cursor-pointer bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded h-12 flex items-center">
-            {t.importCSV}
-            <input type="file" accept=".csv" onChange={importCSV} className="hidden" />
-          </label>
-          {undoStack.length > 0 && (
-            <button 
-              onClick={undoLastAction} 
-              className="ml-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-3 rounded h-12 flex items-center gap-2"
-              title="Ctrl+Z"
+        
+        {/* Månadsväljare och kontroller */}
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-4 sm:mb-8">
+          <div className="flex gap-2 flex-1">
+            <div className="flex items-center gap-1 flex-1 sm:flex-none">
+              <button 
+                onClick={goToPreviousMonth}
+                className="bg-gray-700 hover:bg-gray-600 text-white rounded px-2 py-2 h-12 touch-manipulation transition-colors"
+                title="Föregående månad"
+              >
+                ◀
+              </button>
+              <input 
+                type="month" 
+                id="month" 
+                value={selectedMonth} 
+                onChange={e => setSelectedMonth(e.target.value)} 
+                className="flex-1 sm:flex-none bg-gray-700 text-white rounded px-3 py-2 h-12 text-base border-none focus:ring-2 focus:ring-yellow-400 focus:outline-none touch-manipulation" 
+              />
+              <button 
+                onClick={goToNextMonth}
+                className="bg-gray-700 hover:bg-gray-600 text-white rounded px-2 py-2 h-12 touch-manipulation transition-colors"
+                title="Nästa månad"
+              >
+                ▶
+              </button>
+            </div>
+            <select 
+              value={currency} 
+              onChange={e => setCurrency(e.target.value)} 
+              className="flex-1 sm:flex-none bg-gray-700 text-white rounded px-3 py-2 h-12 text-base border-none focus:ring-2 focus:ring-yellow-400 focus:outline-none touch-manipulation"
             >
-              ↶ Ångra
+              {SUPPORTED_CURRENCIES.map(c => (
+                <option key={c.code} value={c.code}>{c.label}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="flex gap-2 overflow-x-auto">
+            <button 
+              onClick={exportAllDataCSV} 
+              className="flex-shrink-0 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white px-3 sm:px-4 py-3 rounded h-12 text-sm sm:text-base touch-manipulation transition-colors"
+            >
+              {t.exportCSV}
             </button>
-          )}
+            <label className="flex-shrink-0 cursor-pointer bg-green-500 hover:bg-green-600 active:bg-green-700 text-white px-3 sm:px-4 py-3 rounded h-12 flex items-center text-sm sm:text-base touch-manipulation transition-colors">
+              {t.importCSV}
+              <input type="file" accept=".csv" onChange={importCSV} className="hidden" />
+            </label>
+            {undoStack.length > 0 && (
+              <button 
+                onClick={undoLastAction} 
+                className="flex-shrink-0 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white px-3 sm:px-4 py-3 rounded h-12 flex items-center gap-1 sm:gap-2 text-sm sm:text-base touch-manipulation transition-colors"
+                title="Ctrl+Z"
+              >
+                <span className="text-lg">↶</span>
+                <span className="hidden sm:inline">Ångra</span>
+              </button>
+            )}
+          </div>
         </div>
+        
+        {/* Swipe hint for mobile */}
+        <div className="sm:hidden text-center text-gray-400 text-xs mb-4">
+          💡 Swipe vänster/höger för att byta månad
+        </div>
+        
         {/* Tabbinnehåll */}
         {activeTab === 'budget' && (
-          <>
+          <div className="space-y-6">
             <Totals
               t={t}
               formatCurrency={formatCurrency}
@@ -569,7 +661,7 @@ const App: React.FC = () => {
               categories={EXPENSE_CATEGORIES}
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-10">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
               <Incomes
                 incomes={incomes}
                 removeIncome={removeIncome}
@@ -609,7 +701,7 @@ const App: React.FC = () => {
               t={t}
               formatCurrency={formatCurrency}
             />
-          </>
+          </div>
         )}
         {activeTab === 'diagram' && (
           <DiagramTab incomes={incomes} expenses={expenses} savings={savingsList} />
@@ -618,7 +710,13 @@ const App: React.FC = () => {
           <div>
             <div className="mb-4 flex gap-2 items-center">
               <label htmlFor="year" className="text-yellow-400 font-semibold">{t.yearLabel}</label>
-              <input type="number" id="year" value={year} onChange={e => setYear(e.target.value)} className="bg-gray-700 text-white rounded px-3 py-1 w-24" />
+              <input 
+                type="number" 
+                id="year" 
+                value={year} 
+                onChange={e => setYear(e.target.value)} 
+                className="bg-gray-700 text-white rounded px-3 py-1 w-24 touch-manipulation" 
+              />
             </div>
             <YearOverviewTab year={year} />
           </div>
