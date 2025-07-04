@@ -8,7 +8,9 @@ import Savings from './components/Savings';
 import Totals from './components/Totals';
 import AddEntryForm from './components/AddEntryForm';
 import RecurringExpenses from './RecurringExpenses';
+import ThemeSettings from './components/ThemeSettings';
 import { useMonthSwipe } from './hooks/useMonthSwipe';
+import { useTheme } from './hooks/useTheme';
 
 const SUPPORTED_CURRENCIES = [
   { code: 'SEK', label: 'SEK (kr)' },
@@ -33,10 +35,17 @@ function usePrevious<T>(value: T): T | undefined {
 }
 
 const App: React.FC = () => {
+  // Theme management
+  const { getThemeClasses } = useTheme();
+  const theme = getThemeClasses();
+
   // Tabbar och månadsväljare
   const [activeTab, setActiveTab] = useState<'budget' | 'diagram' | 'year'>('budget');
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
   const [year, setYear] = useState(new Date().getFullYear().toString());
+
+  // UI State
+  const [showThemeSettings, setShowThemeSettings] = useState(false);
 
   // Budgetdata per månad
   const [incomes, setIncomes] = useState<any[]>([]);
@@ -525,15 +534,22 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      <div ref={monthSwipeRef} className="w-full max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-10">
-        {/* Språkväxlare */}
+    <div className={`min-h-screen ${theme.bg.primary} ${theme.text.primary}`}>
+      <div ref={monthSwipeRef} className={`w-full max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-10`}>
+        {/* Språkväxlare och tema-knapp */}
         <div className="flex justify-end mb-2 gap-2">
+          <button
+            onClick={() => setShowThemeSettings(true)}
+            className={`${theme.bg.tertiary} ${theme.text.secondary} hover:${theme.text.primary} rounded px-2 py-1 ${theme.border.primary} focus:ring-2 accent-primary-text outline-none text-sm font-semibold min-w-[90px] touch-manipulation transition-colors`}
+            title="Tema-inställningar"
+          >
+            🎨 Tema
+          </button>
           <select 
             id="lang" 
             value={language} 
             onChange={e => setLanguage(e.target.value)}
-            className="bg-gray-700 text-white rounded px-2 py-1 border border-gray-600 focus:ring-2 focus:ring-yellow-400 focus:outline-none text-sm font-semibold min-w-[90px] touch-manipulation"
+            className={`${theme.bg.tertiary} ${theme.text.primary} rounded px-2 py-1 border ${theme.border.primary} focus:ring-2 accent-primary-text focus:outline-none text-sm font-semibold min-w-[90px] touch-manipulation`}
           >
             <option value="sv">Svenska</option>
             <option value="en">English</option>
@@ -545,7 +561,9 @@ const App: React.FC = () => {
           <button 
             onClick={() => setActiveTab('budget')} 
             className={`px-3 sm:px-4 py-2 rounded-t-lg font-semibold whitespace-nowrap touch-manipulation transition-colors ${
-              activeTab === 'budget' ? 'bg-yellow-400 text-gray-900' : 'bg-gray-700 text-yellow-400'
+              activeTab === 'budget' 
+                ? 'accent-primary-bg text-gray-900' 
+                : `${theme.bg.tertiary} accent-primary-text hover:${theme.bg.quaternary}`
             }`}
           >
             {t.budget}
@@ -553,7 +571,9 @@ const App: React.FC = () => {
           <button 
             onClick={() => setActiveTab('diagram')} 
             className={`px-3 sm:px-4 py-2 rounded-t-lg font-semibold whitespace-nowrap touch-manipulation transition-colors ${
-              activeTab === 'diagram' ? 'bg-yellow-400 text-gray-900' : 'bg-gray-700 text-yellow-400'
+              activeTab === 'diagram' 
+                ? 'accent-primary-bg text-gray-900' 
+                : `${theme.bg.tertiary} accent-primary-text hover:${theme.bg.quaternary}`
             }`}
           >
             {t.diagram}
@@ -561,7 +581,9 @@ const App: React.FC = () => {
           <button 
             onClick={() => setActiveTab('year')} 
             className={`px-3 sm:px-4 py-2 rounded-t-lg font-semibold whitespace-nowrap touch-manipulation transition-colors ${
-              activeTab === 'year' ? 'bg-yellow-400 text-gray-900' : 'bg-gray-700 text-yellow-400'
+              activeTab === 'year' 
+                ? 'accent-primary-bg text-gray-900' 
+                : `${theme.bg.tertiary} accent-primary-text hover:${theme.bg.quaternary}`
             }`}
           >
             {t.year}
@@ -569,12 +591,12 @@ const App: React.FC = () => {
         </div>
         
         {/* Månadsväljare och kontroller */}
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-4 sm:mb-8">
+        <div className={`flex flex-col sm:flex-row gap-2 sm:gap-4 ${theme.spacing.margin}`}>
           <div className="flex gap-2 flex-1">
             <div className="flex items-center gap-1 flex-1 sm:flex-none">
               <button 
                 onClick={goToPreviousMonth}
-                className="bg-gray-700 hover:bg-gray-600 text-white rounded px-2 py-2 h-12 touch-manipulation transition-colors"
+                className={`${theme.bg.tertiary} hover:${theme.bg.quaternary} ${theme.text.primary} rounded px-2 py-2 h-12 touch-manipulation transition-colors`}
                 title="Föregående månad"
               >
                 ◀
@@ -584,11 +606,11 @@ const App: React.FC = () => {
                 id="month" 
                 value={selectedMonth} 
                 onChange={e => setSelectedMonth(e.target.value)} 
-                className="flex-1 sm:flex-none bg-gray-700 text-white rounded px-3 py-2 h-12 text-base border-none focus:ring-2 focus:ring-yellow-400 focus:outline-none touch-manipulation" 
+                className={`flex-1 sm:flex-none ${theme.bg.tertiary} ${theme.text.primary} rounded px-3 py-2 h-12 text-base border-none focus:ring-2 accent-primary-text focus:outline-none touch-manipulation`}
               />
               <button 
                 onClick={goToNextMonth}
-                className="bg-gray-700 hover:bg-gray-600 text-white rounded px-2 py-2 h-12 touch-manipulation transition-colors"
+                className={`${theme.bg.tertiary} hover:${theme.bg.quaternary} ${theme.text.primary} rounded px-2 py-2 h-12 touch-manipulation transition-colors`}
                 title="Nästa månad"
               >
                 ▶
@@ -597,7 +619,7 @@ const App: React.FC = () => {
             <select 
               value={currency} 
               onChange={e => setCurrency(e.target.value)} 
-              className="flex-1 sm:flex-none bg-gray-700 text-white rounded px-3 py-2 h-12 text-base border-none focus:ring-2 focus:ring-yellow-400 focus:outline-none touch-manipulation"
+              className={`flex-1 sm:flex-none ${theme.bg.tertiary} ${theme.text.primary} rounded px-3 py-2 h-12 text-base border-none focus:ring-2 accent-primary-text focus:outline-none touch-manipulation`}
             >
               {SUPPORTED_CURRENCIES.map(c => (
                 <option key={c.code} value={c.code}>{c.label}</option>
@@ -608,18 +630,18 @@ const App: React.FC = () => {
           <div className="flex gap-2 overflow-x-auto">
             <button 
               onClick={exportAllDataCSV} 
-              className="flex-shrink-0 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white px-3 sm:px-4 py-3 rounded h-12 text-sm sm:text-base touch-manipulation transition-colors"
+              className={`flex-shrink-0 ${theme.status.infoBg} hover:accent-hover ${theme.status.info} px-3 sm:px-4 py-3 rounded h-12 text-sm sm:text-base touch-manipulation transition-colors`}
             >
               {t.exportCSV}
             </button>
-            <label className="flex-shrink-0 cursor-pointer bg-green-500 hover:bg-green-600 active:bg-green-700 text-white px-3 sm:px-4 py-3 rounded h-12 flex items-center text-sm sm:text-base touch-manipulation transition-colors">
+            <label className={`flex-shrink-0 cursor-pointer ${theme.status.successBg} hover:accent-hover ${theme.status.success} px-3 sm:px-4 py-3 rounded h-12 flex items-center text-sm sm:text-base touch-manipulation transition-colors`}>
               {t.importCSV}
               <input type="file" accept=".csv" onChange={importCSV} className="hidden" />
             </label>
             {undoStack.length > 0 && (
               <button 
                 onClick={undoLastAction} 
-                className="flex-shrink-0 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white px-3 sm:px-4 py-3 rounded h-12 flex items-center gap-1 sm:gap-2 text-sm sm:text-base touch-manipulation transition-colors"
+                className={`flex-shrink-0 ${theme.status.warningBg} hover:accent-hover ${theme.status.warning} px-3 sm:px-4 py-3 rounded h-12 flex items-center gap-1 sm:gap-2 text-sm sm:text-base touch-manipulation transition-colors`}
                 title="Ctrl+Z"
               >
                 <span className="text-lg">↶</span>
@@ -630,7 +652,7 @@ const App: React.FC = () => {
         </div>
         
         {/* Swipe hint for mobile */}
-        <div className="sm:hidden text-center text-gray-400 text-xs mb-4">
+        <div className={`sm:hidden text-center ${theme.text.tertiary} text-xs mb-4`}>
           💡 Swipe vänster/höger för att byta månad
         </div>
         
@@ -722,6 +744,13 @@ const App: React.FC = () => {
           </div>
         )}
       </div>
+      
+      {/* Theme Settings Modal */}
+      <ThemeSettings 
+        t={t}
+        isOpen={showThemeSettings} 
+        onClose={() => setShowThemeSettings(false)} 
+      />
     </div>
   );
 };

@@ -42,6 +42,21 @@ const translations = {
     confirmDeleteRecurring: 'Är du säker på att du vill ta bort denna återkommande utgift?',
     incomeNamePlaceholder: 'Namn på inkomst',
     amountPlaceholder: 'Belopp',
+    // Theme related translations  
+    themeSettings: 'Tema-inställningar',
+    theme: 'Tema',
+    accentColor: 'Accentfärg',
+    compactMode: 'Kompakt vy',
+    compactModeDescription: 'Mindre mellanrum för större skärmar',
+    close: 'Stäng',
+    systemTheme: 'System',
+    // Color names
+    yellow: 'Gul',
+    blue: 'Blå',
+    green: 'Grön',
+    purple: 'Lila',
+    red: 'Röd',
+    orange: 'Orange',
     categories: [
       'Boende', 'Mat', 'Transport', 'Nöjen', 'Hälsa', 'Shopping', 'Övrigt'
     ],
@@ -93,6 +108,21 @@ const translations = {
     confirmDeleteRecurring: 'Are you sure you want to delete this recurring expense?',
     incomeNamePlaceholder: 'Income name',
     amountPlaceholder: 'Amount',
+    // Theme related translations
+    themeSettings: 'Theme Settings',
+    theme: 'Theme',
+    accentColor: 'Accent Color',
+    compactMode: 'Compact View',
+    compactModeDescription: 'Less spacing for larger screens',
+    close: 'Close',
+    systemTheme: 'System',
+    // Color names
+    yellow: 'Yellow',
+    blue: 'Blue',
+    green: 'Green',
+    purple: 'Purple',
+    red: 'Red',
+    orange: 'Orange',
     categories: [
       'Housing', 'Food', 'Transport', 'Entertainment', 'Health', 'Shopping', 'Other'
     ],

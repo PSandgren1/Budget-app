@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import TrashIcon from '../assets/icons/TrashIcon';
 import type { Translation } from '../translations';
 import { useSwipeGestures } from '../hooks/useSwipeGestures';
+import { useTheme } from '../hooks/useTheme';
 
 interface Expense {
   id: number;
@@ -146,6 +147,9 @@ const Expenses: React.FC<ExpensesProps> = ({
   bulkMarkAsPaid,
   bulkDelete
 }) => {
+  const { getThemeClasses } = useTheme();
+  const theme = getThemeClasses();
+  
   const filteredExpenses = expenses.filter(item =>
     (!showOnlyUnpaid || !item.paid) &&
     (
@@ -155,8 +159,8 @@ const Expenses: React.FC<ExpensesProps> = ({
   );
 
   return (
-    <section className="p-3 sm:p-6 bg-gray-800 rounded-lg shadow-xl">
-      <h2 className="text-xl sm:text-2xl font-semibold text-red-400 mb-3 sm:mb-4 border-b-2 border-yellow-400 pb-2">{t.expenses}</h2>
+    <section className={`${theme.spacing.padding} ${theme.bg.secondary} rounded-lg shadow-xl`}>
+      <h2 className={`text-xl sm:text-2xl font-semibold ${theme.status.error} ${theme.spacing.margin} border-b-2 accent-primary-border pb-2`}>{t.expenses}</h2>
       
       {/* Search and filters */}
       <div className="mb-3 sm:mb-4 space-y-2">
@@ -165,15 +169,15 @@ const Expenses: React.FC<ExpensesProps> = ({
           placeholder={t.searchExpense}
           value={expenseSearch}
           onChange={e => setExpenseSearch(e.target.value)}
-          className="w-full p-2 sm:p-3 text-base bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-yellow-400 focus:border-transparent outline-none"
+          className={`w-full p-2 sm:p-3 text-base ${theme.bg.tertiary} border ${theme.border.primary} rounded-lg ${theme.text.primary} focus:ring-2 accent-primary-text focus:border-transparent outline-none`}
         />
         <div className="flex gap-2">
           <button
             onClick={() => setShowOnlyUnpaid(v => !v)}
             className={`flex-1 sm:flex-none px-3 py-2 sm:py-3 rounded-lg font-semibold border transition text-sm whitespace-nowrap touch-manipulation ${
               showOnlyUnpaid 
-                ? 'bg-red-500 text-white border-red-600' 
-                : 'bg-gray-700 text-red-300 border-gray-600'
+                ? `${theme.status.errorBg} ${theme.text.primary} border-red-600` 
+                : `${theme.bg.tertiary} ${theme.status.error} ${theme.border.primary}`
             }`}
           >
             {showOnlyUnpaid ? t.showAll : t.showOnlyUnpaid}
@@ -182,8 +186,8 @@ const Expenses: React.FC<ExpensesProps> = ({
             onClick={() => setBulkMode(!bulkMode)}
             className={`flex-1 sm:flex-none px-3 py-2 sm:py-3 rounded-lg font-semibold border transition text-sm whitespace-nowrap touch-manipulation ${
               bulkMode 
-                ? 'bg-yellow-500 text-gray-900 border-yellow-600' 
-                : 'bg-gray-700 text-yellow-300 border-gray-600'
+                ? 'accent-primary-bg text-gray-900 accent-primary-border' 
+                : `${theme.bg.tertiary} accent-primary-text ${theme.border.primary}`
             }`}
           >
             {bulkMode ? 'Avsluta val' : 'Välj flera'}
