@@ -45,6 +45,11 @@ const translations = {
     categories: [
       'Boende', 'Mat', 'Transport', 'Nöjen', 'Hälsa', 'Shopping', 'Övrigt'
     ],
+    income: 'Inkomst',
+    expense: 'Utgift',
+    saving: 'Sparande',
+    yes: 'Ja',
+    no: 'Nej',
   },
   en: {
     budget: 'Budget',
@@ -91,6 +96,11 @@ const translations = {
     categories: [
       'Housing', 'Food', 'Transport', 'Entertainment', 'Health', 'Shopping', 'Other'
     ],
+    income: 'Income',
+    expense: 'Expense',
+    saving: 'Saving',
+    yes: 'Yes',
+    no: 'No',
   }
 };
 

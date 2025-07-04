@@ -280,17 +280,75 @@ const App: React.FC = () => {
     const reader = new FileReader();
     reader.onload = (evt) => {
       const text = evt.target?.result as string;
-      const lines = text.split('\n').slice(1); // hoppa header
-      const newIncomes: any[] = [], newExpenses: any[] = [], newSavingsList: any[] = [];
+      const lines = text.split('\n').slice(1); // hoppa över header
+      
+      // Gruppera data per månad
+      const monthlyData: { [key: string]: { incomes: any[], expenses: any[], savings: any[] } } = {};
+      
       lines.forEach(line => {
-        const [typ, desc, belopp, kat] = line.split(';');
-        if (typ === 'Inkomst') newIncomes.push({ id: Date.now() + Math.random(), description: desc, amount: parseFloat(belopp) });
-        if (typ === 'Utgift') newExpenses.push({ id: Date.now() + Math.random(), description: desc, amount: parseFloat(belopp), category: kat });
-        if (typ === 'Sparande') newSavingsList.push({ id: Date.now() + Math.random(), amount: parseFloat(belopp) });
+        const [year, month, typ, desc, belopp, kat, betald] = line.split(';');
+        if (!year || !month || !typ || !desc || !belopp) return; // Hoppa över tomma rader
+        
+        const monthKey = `${year}-${month}`;
+        if (!monthlyData[monthKey]) {
+          monthlyData[monthKey] = { incomes: [], expenses: [], savings: [] };
+        }
+        
+        const amount = parseFloat(belopp);
+        if (isNaN(amount)) return;
+        
+        if (typ === t.income || typ === 'Inkomst' || typ === 'Income') {
+          monthlyData[monthKey].incomes.push({ 
+            id: Date.now() + Math.random(), 
+            description: desc, 
+            amount 
+          });
+        } else if (typ === t.expense || typ === 'Utgift' || typ === 'Expense') {
+          monthlyData[monthKey].expenses.push({ 
+            id: Date.now() + Math.random(), 
+            description: desc, 
+            amount, 
+            category: kat || t.categories[0],
+            paid: betald === t.yes || betald === 'Ja' || betald === 'Yes'
+          });
+        } else if (typ === t.saving || typ === 'Sparande' || typ === 'Saving') {
+          monthlyData[monthKey].savings.push({ 
+            id: Date.now() + Math.random(), 
+            description: desc,
+            amount 
+          });
+        }
       });
-      setIncomes(newIncomes);
-      setExpenses(newExpenses);
-      setSavingsList(newSavingsList);
+      
+      // Spara data för varje månad (skriver över befintlig data)
+      Object.entries(monthlyData).forEach(([monthKey, data]) => {
+        const newData = {
+          incomes: data.incomes,
+          expenses: data.expenses,
+          savingsList: data.savings,
+          maxSavings: 10000,
+          currency: currency
+        };
+        
+        localStorage.setItem(`budget-data-${monthKey}`, JSON.stringify(newData));
+      });
+      
+      // Uppdatera aktuell vy om data importerades för den valda månaden
+      if (monthlyData[selectedMonth]) {
+        const currentData = localStorage.getItem(`budget-data-${selectedMonth}`);
+        if (currentData) {
+          const parsedData = JSON.parse(currentData);
+          setIncomes(parsedData.incomes || []);
+          setExpenses(parsedData.expenses || []);
+          setSavingsList(parsedData.savingsList || []);
+          setMaxSavings(parsedData.maxSavings || 10000);
+          if (parsedData.currency) {
+            setCurrency(parsedData.currency);
+          }
+        }
+      }
+      
+      alert(`Data importerad! ${Object.keys(monthlyData).length} månader uppdaterades.`);
     };
     reader.readAsText(file);
   };

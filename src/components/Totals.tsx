@@ -37,12 +37,12 @@ const Totals: React.FC<TotalsProps> = ({
           <div className="text-xs text-gray-300 mt-1 sm:mt-2">
             {savings > 0
               ? `${t.leftToSave}: ${formatCurrency(Math.max(0, savings - totalSaved))}`
-              : `${t.leftToSave}: 0 kr`}
+              : `${t.leftToSave}: ${formatCurrency(0)}`}
           </div>
         </div>
         <div className="bg-gray-700 p-3 sm:p-4 rounded-lg shadow-md flex flex-col items-center">
-          <h2 className="text-base sm:text-lg text-blue-400">{t.savings}</h2>
-          <p className="text-xl sm:text-2xl font-semibold">{formatCurrency(savings > 0 ? savings : 0)}</p>
+          <h2 className="text-base sm:text-lg text-blue-400">{t.totalSaved}</h2>
+          <p className="text-xl sm:text-2xl font-semibold">{formatCurrency(totalSaved)}</p>
           <div className="mt-1 sm:mt-2 w-full bg-gray-600 rounded h-3">
             <div className="bg-yellow-400 h-3 rounded" style={{ width: `${savings > 0 ? Math.min(100, (totalSaved / savings) * 100) : 0}%` }}></div>
           </div>
