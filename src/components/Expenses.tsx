@@ -21,6 +21,13 @@ interface ExpensesProps {
   showOnlyUnpaid: boolean;
   setShowOnlyUnpaid: (value: boolean | ((v: boolean) => boolean)) => void;
   unpaidExpenses: number;
+  // Bulk operations props
+  bulkMode: boolean;
+  setBulkMode: (value: boolean) => void;
+  selectedExpenses: Set<number>;
+  toggleExpenseSelection: (id: number) => void;
+  bulkMarkAsPaid: () => void;
+  bulkDelete: () => void;
 }
 
 const Expenses: React.FC<ExpensesProps> = ({
@@ -33,7 +40,13 @@ const Expenses: React.FC<ExpensesProps> = ({
   setExpenseSearch,
   showOnlyUnpaid,
   setShowOnlyUnpaid,
-  unpaidExpenses
+  unpaidExpenses,
+  bulkMode,
+  setBulkMode,
+  selectedExpenses,
+  toggleExpenseSelection,
+  bulkMarkAsPaid,
+  bulkDelete
 }) => {
   const filteredExpenses = expenses.filter(item =>
     (!showOnlyUnpaid || !item.paid) &&
@@ -60,16 +73,55 @@ const Expenses: React.FC<ExpensesProps> = ({
         >
           {showOnlyUnpaid ? t.showAll : t.showOnlyUnpaid}
         </button>
+        <button
+          onClick={() => setBulkMode(!bulkMode)}
+          className={`px-3 py-2 rounded-lg font-semibold border transition text-sm whitespace-nowrap ${bulkMode ? 'bg-yellow-500 text-gray-900 border-yellow-600' : 'bg-gray-700 text-yellow-300 border-gray-600'}`}
+        >
+          {bulkMode ? 'Avsluta val' : 'Välj flera'}
+        </button>
       </div>
+      
+      {bulkMode && selectedExpenses.size > 0 && (
+        <div className="mb-4 p-3 bg-yellow-900/80 rounded-lg flex gap-2 items-center">
+          <span className="text-yellow-200">{selectedExpenses.size} valda</span>
+          <button
+            onClick={bulkMarkAsPaid}
+            className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-sm"
+          >
+            Markera som betalda
+          </button>
+          <button
+            onClick={bulkDelete}
+            className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm"
+          >
+            Ta bort valda
+          </button>
+        </div>
+      )}
+      
       <div className="mb-4 bg-red-900/80 rounded-lg p-3 text-red-200 font-semibold flex items-center gap-2">
         <span>{t.unpaidExpenses}:</span>
         <span className="text-lg">{formatCurrency(unpaidExpenses)}</span>
       </div>
       <ul>
         {filteredExpenses.map((item) => (
-          <li key={item.id} className={`flex justify-between items-center p-3 mb-2 rounded-lg shadow-sm transition duration-150 ${item.paid ? 'bg-green-700/80 hover:bg-green-600/80' : 'bg-gray-700 hover:bg-gray-600'}`}>
+          <li key={item.id} className={`flex justify-between items-center p-3 mb-2 rounded-lg shadow-sm transition duration-150 ${item.paid ? 'bg-green-700/80 hover:bg-green-600/80' : 'bg-gray-700 hover:bg-gray-600'} ${bulkMode && selectedExpenses.has(item.id) ? 'ring-2 ring-yellow-400' : ''}`}>
             <div className="flex items-center gap-2">
-              <input type="checkbox" checked={!!item.paid} onChange={() => toggleExpensePaid(item.id)} className="accent-green-500 w-5 h-5" title="Markera som betald" />
+              {bulkMode && (
+                <input
+                  type="checkbox"
+                  checked={selectedExpenses.has(item.id)}
+                  onChange={() => toggleExpenseSelection(item.id)}
+                  className="accent-yellow-500 w-5 h-5"
+                />
+              )}
+              <input 
+                type="checkbox" 
+                checked={!!item.paid} 
+                onChange={() => toggleExpensePaid(item.id)} 
+                className="accent-green-500 w-5 h-5" 
+                title="Markera som betald" 
+              />
               <span className={item.paid ? 'line-through text-green-200' : ''}>{item.description} <span className="text-xs text-yellow-300">({item.category})</span></span>
             </div>
             <div className="flex items-center gap-3">

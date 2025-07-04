@@ -56,7 +56,85 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // Undo functionality
+  const [undoStack, setUndoStack] = useState<Array<{
+    action: string;
+    data: any;
+    timestamp: number;
+  }>>([]);
+
+  // Bulk operations
+  const [selectedExpenses, setSelectedExpenses] = useState<Set<number>>(new Set());
+  const [bulkMode, setBulkMode] = useState(false);
+
   const prevSelectedMonth = usePrevious(selectedMonth);
+
+  // Add to undo stack
+  const addToUndoStack = (action: string, data: any) => {
+    setUndoStack(prev => [...prev.slice(-9), { action, data, timestamp: Date.now() }]);
+  };
+
+  // Undo last action
+  const undoLastAction = () => {
+    if (undoStack.length === 0) return;
+    
+    const lastAction = undoStack[undoStack.length - 1];
+    setUndoStack(prev => prev.slice(0, -1));
+    
+    switch (lastAction.action) {
+      case 'ADD_INCOME':
+        setIncomes(prev => prev.filter(item => item.id !== lastAction.data.id));
+        break;
+      case 'ADD_EXPENSE':
+        setExpenses(prev => prev.filter(item => item.id !== lastAction.data.id));
+        break;
+      case 'ADD_SAVING':
+        setSavingsList(prev => prev.filter(item => item.id !== lastAction.data.id));
+        break;
+      case 'REMOVE_INCOME':
+        setIncomes(prev => [...prev, lastAction.data]);
+        break;
+      case 'REMOVE_EXPENSE':
+        setExpenses(prev => [...prev, lastAction.data]);
+        break;
+      case 'REMOVE_SAVING':
+        setSavingsList(prev => [...prev, lastAction.data]);
+        break;
+      case 'TOGGLE_EXPENSE_PAID':
+        setExpenses(prev => prev.map(item =>
+          item.id === lastAction.data.id ? { ...item, paid: lastAction.data.oldPaidStatus } : item
+        ));
+        break;
+      case 'BULK_MARK_PAID':
+        setExpenses(prev => prev.map(item => {
+          const originalExpense = lastAction.data.expenses.find((exp: any) => exp.id === item.id);
+          return originalExpense ? { ...item, paid: originalExpense.paid } : item;
+        }));
+        break;
+      case 'BULK_DELETE':
+        setExpenses(prev => [...prev, ...lastAction.data.expenses]);
+        break;
+    }
+  };
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Undo with Ctrl+Z
+      if (e.ctrlKey && e.key === 'z') {
+        e.preventDefault();
+        undoLastAction();
+      }
+      // Escape to cancel bulk mode
+      if (e.key === 'Escape') {
+        setBulkMode(false);
+        setSelectedExpenses(new Set());
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undoStack]);
 
   // Kombinerad logik för att spara föregående månad och ladda aktuell månad
   useEffect(() => {
@@ -130,6 +208,7 @@ const App: React.FC = () => {
   const addIncome = () => {
     if (!description || !amount) return;
     setIncomes(prev => [...prev, { id: Date.now(), description, amount: parseFloat(amount) }]);
+    addToUndoStack('ADD_INCOME', { id: Date.now(), description, amount: parseFloat(amount) });
     setDescription('');
     setAmount('');
   };
@@ -140,6 +219,7 @@ const App: React.FC = () => {
     const newExpense = { id: Date.now(), description, amount: parseFloat(amount), category, paid: false };
 
     setExpenses(prev => [...prev, newExpense]);
+    addToUndoStack('ADD_EXPENSE', newExpense);
 
     if (isRecurring) {
       const exists = recurringExpenses.some((exp: any) => 
@@ -162,9 +242,13 @@ const App: React.FC = () => {
 
   // Markera utgift som betald/obetalad
   const toggleExpensePaid = (id: number) => {
-    setExpenses(prev => prev.map(item =>
-      item.id === id ? { ...item, paid: !item.paid } : item
-    ));
+    const expense = expenses.find(item => item.id === id);
+    if (expense) {
+      addToUndoStack('TOGGLE_EXPENSE_PAID', { id, oldPaidStatus: expense.paid });
+      setExpenses(prev => prev.map(item =>
+        item.id === id ? { ...item, paid: !item.paid } : item
+      ));
+    }
   };
 
   // Lägg till sparande
@@ -181,19 +265,32 @@ const App: React.FC = () => {
       return;
     }
     setSavingsList(prev => [...prev, { id: Date.now(), description, amount: val }]);
+    addToUndoStack('ADD_SAVING', { id: Date.now(), description, amount: val });
     setDescription('');
     setAmount('');
   };
 
-  // Ta bort post
+  // Ta bort post med bekräftelse
   const removeIncome = (id: number) => {
-    setIncomes(prev => prev.filter(item => item.id !== id));
+    const income = incomes.find(item => item.id === id);
+    if (income && window.confirm(`Är du säker på att du vill ta bort inkomsten "${income.description}"?`)) {
+      addToUndoStack('REMOVE_INCOME', income);
+      setIncomes(prev => prev.filter(item => item.id !== id));
+    }
   };
   const removeExpense = (id: number) => {
-    setExpenses(prev => prev.filter(item => item.id !== id));
+    const expense = expenses.find(item => item.id === id);
+    if (expense && window.confirm(`Är du säker på att du vill ta bort utgiften "${expense.description}"?`)) {
+      addToUndoStack('REMOVE_EXPENSE', expense);
+      setExpenses(prev => prev.filter(item => item.id !== id));
+    }
   };
   const removeSaving = (id: number) => {
-    setSavingsList(prev => prev.filter(item => item.id !== id));
+    const saving = savingsList.find(item => item.id === id);
+    if (saving && window.confirm(`Är du säker på att du vill ta bort sparandet "${saving.description}"?`)) {
+      addToUndoStack('REMOVE_SAVING', saving);
+      setSavingsList(prev => prev.filter(item => item.id !== id));
+    }
   };
 
   // ---- Recurring Expenses Logic ----
@@ -369,6 +466,42 @@ const App: React.FC = () => {
     setCategory(EXPENSE_CATEGORIES[0]);
   }, [language]);
 
+  // Bulk operations
+  const toggleExpenseSelection = (id: number) => {
+    setSelectedExpenses(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const bulkMarkAsPaid = () => {
+    if (selectedExpenses.size === 0) return;
+    
+    const expensesToUpdate = expenses.filter(exp => selectedExpenses.has(exp.id));
+    addToUndoStack('BULK_MARK_PAID', { expenses: expensesToUpdate });
+    
+    setExpenses(prev => prev.map(item =>
+      selectedExpenses.has(item.id) ? { ...item, paid: true } : item
+    ));
+    setSelectedExpenses(new Set());
+  };
+
+  const bulkDelete = () => {
+    if (selectedExpenses.size === 0) return;
+    
+    const expensesToDelete = expenses.filter(exp => selectedExpenses.has(exp.id));
+    if (window.confirm(`Är du säker på att du vill ta bort ${selectedExpenses.size} utgifter?`)) {
+      addToUndoStack('BULK_DELETE', { expenses: expensesToDelete });
+      setExpenses(prev => prev.filter(item => !selectedExpenses.has(item.id)));
+      setSelectedExpenses(new Set());
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center py-10 px-4">
       <div className="w-full max-w-6xl">
@@ -399,6 +532,15 @@ const App: React.FC = () => {
             {t.importCSV}
             <input type="file" accept=".csv" onChange={importCSV} className="hidden" />
           </label>
+          {undoStack.length > 0 && (
+            <button 
+              onClick={undoLastAction} 
+              className="ml-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-3 rounded h-12 flex items-center gap-2"
+              title="Ctrl+Z"
+            >
+              ↶ Ångra
+            </button>
+          )}
         </div>
         {/* Tabbinnehåll */}
         {activeTab === 'budget' && (
@@ -445,6 +587,12 @@ const App: React.FC = () => {
                 showOnlyUnpaid={showOnlyUnpaid}
                 setShowOnlyUnpaid={setShowOnlyUnpaid}
                 unpaidExpenses={unpaidExpenses}
+                bulkMode={bulkMode}
+                setBulkMode={setBulkMode}
+                selectedExpenses={selectedExpenses}
+                toggleExpenseSelection={toggleExpenseSelection}
+                bulkMarkAsPaid={bulkMarkAsPaid}
+                bulkDelete={bulkDelete}
               />
               <Savings
                 savings={savingsList}
